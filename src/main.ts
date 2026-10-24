@@ -262,6 +262,21 @@ function scramble() {
   if (res.gameOver) window.setTimeout(showGameOver, 400);
 }
 
+function confirmScramble() {
+  if (busy || game.state.gameOver) return;
+  showOverlay('Scramble the board?', '<p>Every letter gets shuffled, and a fire starts somewhere up top.</p>', [
+    { label: 'Cancel', run: hideOverlay },
+    {
+      label: 'Scramble',
+      primary: true,
+      run: () => {
+        hideOverlay();
+        scramble();
+      },
+    },
+  ]);
+}
+
 function clearSelection() {
   selection = [];
   renderSelection();
@@ -442,11 +457,14 @@ function toast(text: string) {
 
 $('btn-feed').addEventListener('click', submit);
 $('btn-clear').addEventListener('click', clearSelection);
-$('btn-scramble').addEventListener('click', scramble);
+$('btn-scramble').addEventListener('click', confirmScramble);
 $('btn-new').addEventListener('click', confirmNewGame);
 $('btn-help').addEventListener('click', showHelp);
 $('overlay').addEventListener('click', (e) => e.target === $('overlay') && !game.state.gameOver && hideOverlay());
 window.addEventListener('resize', () => fitBoard());
+// iOS Safari ignores user-scalable=no, so block pinch zoom directly.
+for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, (e) => e.preventDefault());
+document.addEventListener('touchmove', (e) => e.touches.length > 1 && e.preventDefault(), { passive: false });
 
 fitBoard();
 if (game.state.wordsPlayed > 0) say(`Welcome back! You're on level ${game.state.level}.`);
