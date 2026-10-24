@@ -4,7 +4,6 @@ import bonusText from './data/bonus.txt?raw';
 import { dictionaryFromText, wordsFromText } from './engine/dictionary';
 import { ClassicGame, type TurnResult } from './engine/classic';
 import { isAdjacent, samePos, type Pos, type Tile } from './engine/board';
-import { findPath } from './engine/pathfind';
 import { RULES } from './engine/rules';
 import { Goat } from './ui/goat';
 import { addScore, loadGame, loadScores, saveGame } from './ui/storage';
@@ -16,7 +15,6 @@ const bonusWords = wordsFromText(bonusText);
 
 let game = startGame();
 let selection: Pos[] = [];
-let typed = ''; // keyboard input on desktop
 let busy = false; // during tile animations
 
 const boardEl = $('board');
@@ -145,14 +143,6 @@ function renderSelection() {
   const ptsEl = $('current-points');
   const feed = $<HTMLButtonElement>('btn-feed');
   wordEl.className = 'current-word';
-  if (typed && !selection.length) {
-    wordEl.textContent = typed;
-    wordEl.classList.add('missing');
-    ptsEl.textContent = 'not on board';
-    feed.disabled = true;
-    feed.textContent = 'Feed Rapunzel';
-    return;
-  }
   if (!selection.length) {
     wordEl.innerHTML = '&nbsp;';
     ptsEl.textContent = '';
@@ -242,7 +232,6 @@ function submit() {
     return;
   }
   selection = [];
-  typed = '';
   busy = true;
   animateOut(eatenIds, 'eaten');
   animateOut(res.burnedTileIds, 'burnt');
@@ -263,7 +252,6 @@ function scramble() {
   if (busy || game.state.gameOver) return;
   const res = game.scramble();
   selection = [];
-  typed = '';
   animateOut(res.burnedTileIds, 'burnt');
   for (const el of tileEls.values()) {
     el.animate?.([{ transform: el.style.transform + ' rotateY(0deg)' }, { transform: el.style.transform + ' rotateY(180deg)' }, { transform: el.style.transform + ' rotateY(360deg)' }], { duration: 350 });
@@ -276,7 +264,6 @@ function scramble() {
 
 function clearSelection() {
   selection = [];
-  typed = '';
   renderSelection();
 }
 
@@ -286,7 +273,6 @@ function newGame() {
   tileEls.clear();
   game = new ClassicGame(dict, bonusWords, (Math.random() * 2 ** 32) >>> 0);
   selection = [];
-  typed = '';
   hideOverlay();
   say("Fresh shelf of letters. Spell a word and I'll eat it.");
   render();
@@ -300,7 +286,6 @@ let dragging = false;
 let pointerId: number | null = null;
 
 function tap(p: Pos) {
-  typed = '';
   const idx = selection.findIndex((q) => samePos(q, p));
   const last = selection.at(-1);
   if (!last) selection = [p];
@@ -337,7 +322,6 @@ boardEl.addEventListener('pointermove', (e) => {
   if (!p || samePos(p, downPos) && !dragging) return;
   if (!dragging) {
     dragging = true;
-    typed = '';
     const last = selection.at(-1);
     if (!last || !samePos(last, downPos)) selection = [downPos];
   }
@@ -357,7 +341,7 @@ boardEl.addEventListener('pointercancel', (e) => {
   if (e.pointerId === pointerId) pointerId = null;
 });
 
-/* ---------------- Input: keyboard ---------------- */
+/* ---------------- Input: keyboard shortcuts (no typing words) ---------------- */
 
 window.addEventListener('keydown', (e) => {
   if (!$('overlay').hidden) {
@@ -367,20 +351,13 @@ window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || busy || game.state.gameOver) return;
   if (e.key === 'Enter') {
     e.preventDefault();
-    return submit();
-  }
-  if (e.key === 'Escape') return clearSelection();
-  if (e.key === 'Backspace') {
+    submit();
+  } else if (e.key === 'Escape') clearSelection();
+  else if (e.key === 'Backspace') {
     e.preventDefault();
-    typed = typed ? typed.slice(0, -1) : game.preview(selection).word.slice(0, -1);
-  } else if (/^[a-zA-Z]$/.test(e.key)) {
-    if (!typed && selection.length) typed = game.preview(selection).word;
-    typed += e.key.toLowerCase();
-  } else return;
-  const path = typed ? findPath(game.board, typed) ?? (typed.endsWith('q') ? findPath(game.board, typed + 'u') : null) : null;
-  selection = path ?? [];
-  if (!typed) selection = [];
-  renderSelection();
+    selection.pop();
+    renderSelection();
+  }
 });
 
 /* ---------------- Overlays ---------------- */
@@ -432,8 +409,8 @@ function showHelp() {
   showOverlay(
     'How to play',
     `<ul>
-      <li>Drag across touching letters, or tap them one by one, to spell a word of 3+ letters. On a keyboard, just type.</li>
-      <li>Tap the last letter again, press <b>Feed</b>, or hit Enter to feed the word to Rapunzel.</li>
+      <li>Drag across touching letters, or tap them one by one, to spell a word of 3+ letters.</li>
+      <li>Tap the last letter again, or press <b>Feed</b> to feed the word to Rapunzel.</li>
       <li>Longer words and rare letters score more. <b>Qu</b> counts as two letters.</li>
       <li>Long words leave gems that multiply your next word: ${gem('green')}6 ${gem('gold')}7 ${gem('sapphire')}8 ${gem('diamond')}9 ${gem('crystal')}10+ letters.</li>
       <li><b style="color:#c4320f">Burning tiles</b> burn the tile below each turn. Use them in a word to put them out. If one reaches the bottom, the game ends.</li>
