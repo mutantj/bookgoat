@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Bookgoat</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
+    <meta name="theme-color" content="#173236" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Atkinson+Hyperlegible:wght@400;700&display=swap"
+    />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="hud">
+        <div class="brand">
+          <span class="brand-name">Bookgoat</span>
+          <span class="mode-chip">Classic</span>
+        </div>
+        <div class="score-block">
+          <span class="label">Score</span>
+          <span id="score" class="score">0</span>
+        </div>
+        <div class="level-block">
+          <div class="level-row">
+            <span class="label">Level <b id="level">1</b></span>
+            <span id="level-progress-text" class="progress-text">0 / 400</span>
+          </div>
+          <div class="hay" role="progressbar" aria-label="Level progress" aria-valuemin="0" aria-valuemax="100" id="hay">
+            <div id="hay-fill" class="hay-fill"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="play">
+        <section class="stage">
+          <div class="goat-row">
+            <div id="goat" class="goat" aria-hidden="true"></div>
+            <div class="bubble" id="bubble" aria-live="polite">Spell a word and I'll eat it.</div>
+          </div>
+          <div class="bonus">
+            <span class="label">Bonus word</span>
+            <span id="bonus-word" class="bonus-word">—</span>
+          </div>
+        </section>
+
+        <section class="board-area">
+          <div class="word-bar">
+            <span id="current-word" class="current-word" aria-live="polite">&nbsp;</span>
+            <span id="current-points" class="current-points"></span>
+          </div>
+          <div id="board-wrap" class="board-wrap">
+            <div id="board" class="board" role="grid" aria-label="Letter board">
+              <svg id="chain" class="chain" aria-hidden="true"></svg>
+            </div>
+          </div>
+          <div class="controls">
+            <button id="btn-scramble" class="btn btn-quiet" type="button" title="Shuffle all letters (adds a fire tile)">Scramble</button>
+            <button id="btn-clear" class="btn btn-quiet" type="button">Clear</button>
+            <button id="btn-feed" class="btn btn-feed" type="button" disabled>Feed Rapunzel</button>
+          </div>
+        </section>
+
+        <aside class="side">
+          <div class="stats">
+            <div><span class="label">Longest</span><span id="stat-longest" class="stat">—</span></div>
+            <div><span class="label">Best word</span><span id="stat-best" class="stat">—</span></div>
+            <div><span class="label">Words</span><span id="stat-words" class="stat">0</span></div>
+          </div>
+          <div class="history-block">
+            <span class="label">Recent words</span>
+            <ol id="history" class="history"></ol>
+          </div>
+          <div class="side-actions">
+            <button id="btn-new" class="btn btn-quiet" type="button">New game</button>
+            <button id="btn-help" class="btn btn-quiet" type="button">How to play</button>
+          </div>
+        </aside>
+      </main>
+
+      <div id="overlay" class="overlay" hidden>
+        <div class="card" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+          <h2 id="overlay-title"></h2>
+          <div id="overlay-body"></div>
+          <div id="overlay-actions" class="card-actions"></div>
+        </div>
+      </div>
+      <div id="toast" class="toast" hidden></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
