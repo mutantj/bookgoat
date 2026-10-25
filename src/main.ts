@@ -9,6 +9,8 @@ import { Goat } from './ui/goat';
 import { addScore, loadGame, loadScores, saveGame } from './ui/storage';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
 
+declare const __APP_VERSION__: string; // from package.json, see vite.config.ts
+
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
 const dict = dictionaryFromText(enableText);
@@ -513,6 +515,7 @@ function startFromSplash() {
   window.setTimeout(leave, 4000); // never get stuck if the audio stalls
 }
 
+$('splash-version').textContent = `v${__APP_VERSION__}`;
 const startBtn = $<HTMLButtonElement>('btn-start');
 const inProgress = game.state.wordsPlayed > 0 && !game.state.gameOver;
 startBtn.textContent = inProgress ? 'Continue' : 'Play';
