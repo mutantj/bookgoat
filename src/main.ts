@@ -471,8 +471,16 @@ document.addEventListener('touchmove', (e) => e.touches.length > 1 && e.preventD
 
 new Goat($('splash-goat'));
 const welcome = new Audio(welcomeUrl);
+let welcomeDone = false;
+let afterWelcome: (() => void) | null = null;
+function finishWelcome() {
+  welcomeDone = true;
+  $('splash-goat').classList.remove('talk');
+  afterWelcome?.();
+}
 welcome.addEventListener('playing', () => $('splash-goat').classList.add('talk'));
-welcome.addEventListener('ended', () => $('splash-goat').classList.remove('talk'));
+welcome.addEventListener('ended', finishWelcome);
+welcome.addEventListener('error', finishWelcome);
 
 // Greet as soon as the splash is ready. Most browsers block sound until the first tap or key
 // on a page, so if this is refused, greet on that first tap or key instead.
@@ -481,19 +489,28 @@ function playWelcome() {
     const retry = () => {
       document.removeEventListener('pointerdown', retry, true);
       document.removeEventListener('keydown', retry, true);
-      welcome.play().catch(() => {});
+      welcome.play().catch(finishWelcome);
     };
     document.addEventListener('pointerdown', retry, true);
     document.addEventListener('keydown', retry, true);
   });
 }
 
+// Let Rapunzel finish her greeting before showing the board.
 function startFromSplash() {
   const splash = $('splash');
   $<HTMLButtonElement>('btn-start').disabled = true;
   $<HTMLButtonElement>('btn-splash-new').disabled = true;
-  splash.classList.add('leaving');
-  window.setTimeout(() => (splash.hidden = true), 400);
+  let left = false;
+  const leave = () => {
+    if (left) return;
+    left = true;
+    splash.classList.add('leaving');
+    window.setTimeout(() => (splash.hidden = true), 400);
+  };
+  if (welcomeDone) return leave();
+  afterWelcome = leave;
+  window.setTimeout(leave, 4000); // never get stuck if the audio stalls
 }
 
 const startBtn = $<HTMLButtonElement>('btn-start');
