@@ -7,6 +7,7 @@ import { isAdjacent, samePos, type Pos, type Tile } from './engine/board';
 import { RULES } from './engine/rules';
 import { Goat } from './ui/goat';
 import { addScore, loadGame, loadScores, saveGame } from './ui/storage';
+import welcomeUrl from '../audio/export/welcometobookgoat.wav';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -465,6 +466,54 @@ window.addEventListener('resize', () => fitBoard());
 // iOS Safari ignores user-scalable=no, so block pinch zoom directly.
 for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, (e) => e.preventDefault());
 document.addEventListener('touchmove', (e) => e.touches.length > 1 && e.preventDefault(), { passive: false });
+
+/* ---------------- Loading screen ---------------- */
+
+new Goat($('splash-goat'));
+const welcome = new Audio(welcomeUrl);
+welcome.addEventListener('playing', () => $('splash-goat').classList.add('talk'));
+welcome.addEventListener('ended', () => $('splash-goat').classList.remove('talk'));
+
+// Greet as soon as the splash is ready. Most browsers block sound until the first tap or key
+// on a page, so if this is refused, greet on that first tap or key instead.
+function playWelcome() {
+  welcome.play().catch(() => {
+    const retry = () => {
+      document.removeEventListener('pointerdown', retry, true);
+      document.removeEventListener('keydown', retry, true);
+      welcome.play().catch(() => {});
+    };
+    document.addEventListener('pointerdown', retry, true);
+    document.addEventListener('keydown', retry, true);
+  });
+}
+
+function startFromSplash() {
+  const splash = $('splash');
+  $<HTMLButtonElement>('btn-start').disabled = true;
+  $<HTMLButtonElement>('btn-splash-new').disabled = true;
+  splash.classList.add('leaving');
+  window.setTimeout(() => (splash.hidden = true), 400);
+}
+
+const startBtn = $<HTMLButtonElement>('btn-start');
+const inProgress = game.state.wordsPlayed > 0 && !game.state.gameOver;
+startBtn.textContent = inProgress ? 'Continue' : 'Play';
+startBtn.disabled = false;
+startBtn.addEventListener('click', startFromSplash);
+if (inProgress) {
+  const saved = $('splash-saved');
+  saved.textContent = `Game in progress: level ${game.state.level}, ${game.state.score.toLocaleString()} points`;
+  saved.hidden = false;
+  const newBtn = $('btn-splash-new');
+  newBtn.hidden = false;
+  newBtn.addEventListener('click', () => {
+    newGame();
+    startFromSplash();
+  });
+}
+startBtn.focus();
+playWelcome();
 
 fitBoard();
 if (game.state.wordsPlayed > 0) say(`Welcome back! You're on level ${game.state.level}.`);

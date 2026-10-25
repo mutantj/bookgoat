@@ -1,3 +1,7 @@
 node_modules
 dist
 dist-single
+
+# Audacity project files (only the exported .wav is used)
+audio/*.aup3
+audio/*.aup3-*

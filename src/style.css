@@ -588,12 +588,68 @@ body {
   text-align: center;
 }
 
+/* ---------- Loading screen ---------- */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(120% 70% at 50% 0%, #22474c 0%, var(--night) 60%), var(--night);
+  transition: opacity 400ms ease;
+}
+.splash.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.splash-goat {
+  width: min(200px, 50vw);
+}
+.splash-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2.6rem;
+  color: var(--marigold);
+}
+.splash-bubble {
+  margin: 0;
+  background: var(--snow);
+  color: #22343a;
+  border-radius: 14px;
+  padding: 9px 16px;
+  font-size: 1.1rem;
+}
+.splash-saved {
+  margin: 0;
+  color: var(--mist);
+}
+.splash-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.splash .btn {
+  min-width: 160px;
+}
+
 /* ---------- Rapunzel ---------- */
 .goat .jaw {
   transform-origin: 60px 78px;
 }
 .goat.chew .jaw {
   animation: chew 180ms ease-in-out 4 alternate;
+}
+.goat.talk .jaw {
+  animation: chew 160ms ease-in-out infinite alternate;
 }
 @keyframes chew {
   to { transform: translateY(4px) rotate(-3deg); }
