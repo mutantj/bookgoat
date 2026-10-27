@@ -27,6 +27,17 @@ export class Goat {
     clearTimeout(this.timer);
     this.timer = window.setTimeout(() => this.el.classList.remove(mood), 1100);
   }
+  /** Mouth wide open, waiting for tiles to fly in. */
+  openMouth(on: boolean) {
+    this.el.classList.toggle('mouth-open', on);
+    if (!on) this.el.classList.remove('bite');
+  }
+  /** One quick chomp on whatever just arrived. */
+  bite() {
+    this.el.classList.remove('bite');
+    void this.el.offsetWidth; // restart the animation
+    this.el.classList.add('bite');
+  }
   /** Ongoing state driven by the board. */
   setWorried(on: boolean) {
     this.el.classList.toggle('worried', on);

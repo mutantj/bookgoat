@@ -394,6 +394,25 @@ body {
   transition: opacity 450ms ease 150ms;
 }
 
+/* Eaten tiles fly above everything else so the board's edge doesn't clip them. */
+.fly-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+.tile.flying {
+  transition: none;
+}
+.crumb {
+  position: absolute;
+  width: 5px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--birch);
+  box-shadow: 0 0 0 1px var(--birch-dark);
+}
+
 /* ---------- Controls ---------- */
 .controls {
   width: calc(var(--s) * 7);
@@ -649,6 +668,31 @@ body {
 /* ---------- Rapunzel ---------- */
 .goat .jaw {
   transform-origin: 60px 78px;
+  transition: transform 90ms ease;
+}
+.goat .mouth {
+  transform-box: fill-box;
+  transform-origin: center top;
+  transform: scaleY(0);
+  transition: transform 90ms ease;
+}
+.goat.mouth-open .jaw {
+  transform: translateY(6px) rotate(-2deg);
+}
+.goat.mouth-open .mouth {
+  transform: scaleY(1);
+}
+.goat.bite .jaw {
+  animation: bite-jaw 140ms ease-in-out;
+}
+.goat.bite .mouth {
+  animation: bite-mouth 140ms ease-in-out;
+}
+@keyframes bite-jaw {
+  50% { transform: translateY(0) rotate(0deg); }
+}
+@keyframes bite-mouth {
+  50% { transform: scaleY(0.1); }
 }
 .goat.chew .jaw {
   animation: chew 180ms ease-in-out 4 alternate;

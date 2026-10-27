@@ -204,22 +204,110 @@ function sayForTurn(res: TurnResult) {
 /* ---------------- Turns ---------------- */
 
 function animateOut(ids: number[], cls: 'eaten' | 'burnt') {
-  const goatBox = $('goat').getBoundingClientRect();
-  const boardBox = boardEl.getBoundingClientRect();
   for (const id of ids) {
     const el = tileEls.get(id);
     if (!el) continue;
     tileEls.delete(id);
     el.classList.add('leaving', cls);
     el.classList.remove('selected', 'last');
-    if (cls === 'eaten') {
-      // Fly toward Rapunzel's mouth.
-      const tx = goatBox.left + goatBox.width * 0.5 - boardBox.left - cell / 2;
-      const ty = goatBox.top + goatBox.height * 0.7 - boardBox.top - cell / 2;
-      el.style.transform = `translate(${tx}px, ${ty}px) scale(0.2)`;
-    }
     window.setTimeout(() => el.remove(), 650);
   }
+}
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const FEED = { lift: 100, gap: 50, maxStagger: 300, flight: 420 }; // ms
+let feedGen = 0;
+
+/** Middle of Rapunzel's mouth (or jaw) on screen, read from the SVG so it follows the artwork. */
+function mouthPoint() {
+  const svg = $('goat').querySelector('svg')!;
+  const box = svg.getBoundingClientRect();
+  const part = svg.querySelector<SVGGraphicsElement>('.mouth, .jaw');
+  if (!part) return { x: box.left + box.width / 2, y: box.top + box.height * 0.7 };
+  const bb = part.getBBox();
+  const vb = svg.viewBox.baseVal;
+  return {
+    x: box.left + ((bb.x + bb.width / 2 - vb.x) * box.width) / vb.width,
+    y: box.top + ((bb.y + bb.height / 2 - vb.y) * box.height) / vb.height,
+  };
+}
+
+function crumbs(at: { x: number; y: number }) {
+  for (let i = 0; i < 3; i++) {
+    const c = document.createElement('div');
+    c.className = 'crumb';
+    c.style.left = `${at.x}px`;
+    c.style.top = `${at.y}px`;
+    $('fly-layer').appendChild(c);
+    const angle = Math.PI * (0.1 + 0.8 * Math.random()); // fan out downward
+    const dist = 12 + Math.random() * 14;
+    c.animate(
+      [
+        { transform: 'translate(-50%, -50%)', opacity: 1 },
+        { transform: `translate(calc(-50% + ${Math.cos(angle) * dist}px), calc(-50% + ${Math.sin(angle) * dist}px)) rotate(${Math.random() * 360}deg)`, opacity: 0 },
+      ],
+      { duration: 380, easing: 'cubic-bezier(0.2, 0.6, 0.4, 1)' },
+    ).onfinish = () => c.remove();
+  }
+}
+
+/** Lift the eaten tiles off the board and fly them one by one into Rapunzel's mouth, then call done. */
+function feedTiles(ids: number[], done: () => void) {
+  if (reduceMotion.matches) {
+    animateOut(ids, 'eaten');
+    return done();
+  }
+  const els = ids.map((id) => tileEls.get(id)).filter((el): el is HTMLDivElement => !!el);
+  for (const id of ids) tileEls.delete(id);
+  if (!els.length) return done();
+
+  const gen = ++feedGen;
+  const target = mouthPoint();
+  const gap = els.length > 1 ? Math.min(FEED.gap, FEED.maxStagger / (els.length - 1)) : 0;
+  let left = els.length;
+  window.setTimeout(() => gen === feedGen && goat.openMouth(true), FEED.lift + FEED.flight - 150);
+
+  els.forEach((el, i) => {
+    const r = el.getBoundingClientRect();
+    const fly = el.cloneNode(true) as HTMLDivElement;
+    el.remove();
+    fly.classList.remove('last');
+    fly.classList.add('flying');
+    fly.style.transform = '';
+    fly.style.left = `${r.left}px`;
+    fly.style.top = `${r.top}px`;
+    $('fly-layer').appendChild(fly);
+
+    // Quadratic curve from the tile to the mouth, bowing up and out so the tiles arc rather than slide.
+    const lift = -cell * 0.15;
+    const dx = target.x - (r.left + r.width / 2);
+    const dy = target.y - (r.top + r.height / 2);
+    const side = i % 2 ? 1 : -1;
+    const ctrl = { x: dx / 2 + side * cell * 0.8, y: Math.min(lift, dy) - cell * 1.2 };
+    const spin = side * (100 + i * 25);
+    const start = FEED.lift + i * gap;
+    const total = start + FEED.flight;
+    const at = (x: number, y: number, s: number, rot = 0) => `translate(${x}px, ${y}px) rotate(${rot}deg) scale(${s})`;
+    const frames: Keyframe[] = [
+      { offset: 0, transform: at(0, 0, 1) },
+      { offset: FEED.lift / total, transform: at(0, lift, 1.12) },
+      { offset: start / total, transform: at(0, lift, 1.12) },
+    ];
+    for (let k = 1; k <= 8; k++) {
+      const t = (k / 8) ** 1.4; // speed up toward the mouth
+      const x = 2 * (1 - t) * t * ctrl.x + t * t * dx;
+      const y = (1 - t) ** 2 * lift + 2 * (1 - t) * t * ctrl.y + t * t * dy;
+      frames.push({ offset: (start + (FEED.flight * k) / 8) / total, transform: at(x, y, 1.12 - 0.9 * t ** 0.7, spin * t) });
+    }
+    fly.animate(frames, { duration: total, fill: 'forwards' }).onfinish = () => {
+      fly.remove();
+      crumbs(target);
+      if (gen === feedGen) goat.bite();
+      if (--left) return;
+      if (gen === feedGen) goat.openMouth(false);
+      done();
+    };
+  });
 }
 
 function submit() {
@@ -236,10 +324,11 @@ function submit() {
   }
   selection = [];
   busy = true;
-  animateOut(eatenIds, 'eaten');
+  feedTiles(eatenIds, () => {
+    goat.react(res.levelUp || res.bonusHit || res.gemEarned ? 'cheer' : 'chew');
+    sayForTurn(res);
+  });
   animateOut(res.burnedTileIds, 'burnt');
-  goat.react(res.levelUp || res.bonusHit || res.gemEarned ? 'cheer' : 'chew');
-  sayForTurn(res);
   render(false, res.newTileIds);
   saveGame(game.state);
   if (res.levelUp) toast(`Level ${game.state.level}! New bonus word: ${game.state.bonusWord.toUpperCase()}`);

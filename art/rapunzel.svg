@@ -25,6 +25,10 @@
     <ellipse cx="60" cy="77" rx="13.5" ry="10" fill="#ebdfcd" stroke="#c4b49b" stroke-width="1"/>
     <ellipse cx="55.5" cy="75" rx="2" ry="1.4" fill="#7b6a58"/>
     <ellipse cx="64.5" cy="75" rx="2" ry="1.4" fill="#7b6a58"/>
+    <g class="mouth">
+      <ellipse cx="60" cy="85" rx="6.5" ry="4.5" fill="#6b2f36" stroke="#4a1f25" stroke-width="0.8"/>
+      <ellipse cx="60" cy="87.6" rx="3.6" ry="1.7" fill="#e8838f"/>
+    </g>
     <g class="jaw">
       <path d="M53 83 Q60 88 67 83" stroke="#7b6a58" stroke-width="1.6" fill="none" stroke-linecap="round"/>
       <path d="M54 89 Q60 108 66 89 Z" fill="#e9dfcd" stroke="#b9ad98" stroke-width="1.2"/>
