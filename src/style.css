@@ -527,7 +527,7 @@ body {
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 40; /* above the start screen too */
   display: grid;
   place-items: center;
   background: rgba(8, 20, 22, 0.72);

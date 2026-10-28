@@ -528,11 +528,15 @@ function showHelp() {
   );
 }
 
-function confirmNewGame() {
-  if (game.state.wordsPlayed === 0) return newGame();
+function confirmNewGame(then?: () => void) {
+  const start = () => {
+    newGame();
+    then?.();
+  };
+  if (game.state.wordsPlayed === 0) return start();
   showOverlay('Start a new game?', '<p>Your current game will be lost.</p>', [
     { label: 'Keep playing', run: hideOverlay },
-    { label: 'New game', primary: true, run: newGame },
+    { label: 'New game', primary: true, run: start },
   ]);
 }
 
@@ -550,7 +554,7 @@ function toast(text: string) {
 $('btn-feed').addEventListener('click', submit);
 $('btn-clear').addEventListener('click', clearSelection);
 $('btn-scramble').addEventListener('click', confirmScramble);
-$('btn-new').addEventListener('click', confirmNewGame);
+$('btn-new').addEventListener('click', () => confirmNewGame());
 $('btn-help').addEventListener('click', showHelp);
 $('overlay').addEventListener('click', (e) => e.target === $('overlay') && !game.state.gameOver && hideOverlay());
 window.addEventListener('resize', () => fitBoard());
@@ -616,10 +620,7 @@ if (inProgress) {
   saved.hidden = false;
   const newBtn = $('btn-splash-new');
   newBtn.hidden = false;
-  newBtn.addEventListener('click', () => {
-    newGame();
-    startFromSplash();
-  });
+  newBtn.addEventListener('click', () => confirmNewGame(startFromSplash));
 }
 startBtn.focus();
 playWelcome();
