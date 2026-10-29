@@ -706,6 +706,13 @@ function playWelcome() {
   });
 }
 
+// Tap anywhere on the home screen (other than a button) to hear the greeting again.
+$('splash').addEventListener('click', (e) => {
+  if ((e.target as Element).closest('button') || !welcome.paused) return;
+  welcome.currentTime = 0;
+  welcome.play().catch(() => {});
+});
+
 const homeButtons = () => [$<HTMLButtonElement>('btn-start'), $<HTMLButtonElement>('btn-blitz')];
 
 // Let Rapunzel finish her greeting before showing the board, then run `then` once the home screen has gone.
@@ -722,7 +729,7 @@ function startFromSplash(then?: () => void) {
       then?.();
     }, 400);
   };
-  if (welcomeDone) return leave();
+  if (welcomeDone && welcome.paused) return leave();
   afterWelcome = leave;
   window.setTimeout(leave, 4000); // never get stuck if the audio stalls
 }
