@@ -440,12 +440,21 @@ function stopBlitz() {
   $('countdown').hidden = true;
 }
 
-/** A fresh board, a 3-2-1 countdown, then one minute on the clock. */
-function startBlitz() {
+/** A fresh board with a full clock, waiting for the countdown. */
+function setupBlitz() {
   setMode('blitz');
   loadBoard(freshGame());
   renderClock(BLITZ_MS);
   say('One minute! Feed me as many words as you can.');
+}
+
+function startBlitz() {
+  setupBlitz();
+  countIn();
+}
+
+/** 3-2-1, then one minute on the clock. */
+function countIn() {
   const run = blitzRun;
   const box = $('countdown');
   const steps = ['3', '2', '1', 'Go!'];
@@ -743,8 +752,8 @@ $('btn-start').addEventListener('click', () => {
   startFromSplash();
 });
 $('btn-blitz').addEventListener('click', () => {
-  setMode('blitz'); // shows the Blitz HUD behind the fading home screen
-  startFromSplash(startBlitz);
+  setupBlitz(); // swap in the Blitz board now so the old one never shows as the home screen fades
+  startFromSplash(countIn);
 });
 
 $('splash-version').textContent = `v${__APP_VERSION__}`;
