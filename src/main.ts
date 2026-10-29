@@ -446,6 +446,10 @@ function setupBlitz() {
   loadBoard(freshGame());
   renderClock(BLITZ_MS);
   say('One minute! Feed me as many words as you can.');
+  // Dim the board straight away, so it doesn't flash up before the countdown starts.
+  const box = $('countdown');
+  box.innerHTML = '';
+  box.hidden = false;
 }
 
 function startBlitz() {
