@@ -6,7 +6,7 @@ import { ClassicGame, type TurnResult } from './engine/classic';
 import { isAdjacent, samePos, type Pos, type Tile } from './engine/board';
 import { RULES } from './engine/rules';
 import { Goat } from './ui/goat';
-import { addScore, loadGame, loadScores, saveGame } from './ui/storage';
+import { addScore, loadGame, loadScores, saveGame, type Mode } from './ui/storage';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
 
 declare const __APP_VERSION__: string; // from package.json, see vite.config.ts
@@ -17,6 +17,7 @@ const dict = dictionaryFromText(enableText);
 const bonusWords = wordsFromText(bonusText);
 
 let game = startGame();
+let mode: Mode = 'classic';
 let selection: Pos[] = [];
 let busy = false; // during tile animations
 
@@ -34,8 +35,20 @@ function startGame(): ClassicGame {
       /* corrupt save — start fresh */
     }
   }
+  return freshGame();
+}
+
+function freshGame() {
   return new ClassicGame(dict, bonusWords, (Math.random() * 2 ** 32) >>> 0);
 }
+
+/** Only Classic is saved; a Blitz round never touches the Classic save. */
+function persist() {
+  if (mode === 'classic') saveGame(game.state);
+}
+
+/** True while the board shouldn't take input: animating, game over, or a Blitz clock that isn't running. */
+const locked = () => busy || game.state.gameOver || (mode === 'blitz' && !clockRunning);
 
 /* ---------------- Geometry ---------------- */
 
@@ -311,7 +324,7 @@ function feedTiles(ids: number[], done: () => void) {
 }
 
 function submit() {
-  if (busy || !selection.length) return;
+  if (locked() || !selection.length) return;
   const eatenIds = selection.map((p) => game.board[p.c][p.r].id);
   const res = game.submit(selection);
   if (!res.ok) {
@@ -330,7 +343,7 @@ function submit() {
   });
   animateOut(res.burnedTileIds, 'burnt');
   render(false, res.newTileIds);
-  saveGame(game.state);
+  persist();
   if (res.levelUp) toast(`Level ${game.state.level}! New bonus word: ${game.state.bonusWord.toUpperCase()}`);
   else if (res.bonusHit) toast(`Bonus word! +${res.bonusPoints}`);
   window.setTimeout(() => {
@@ -341,7 +354,7 @@ function submit() {
 }
 
 function scramble() {
-  if (busy || game.state.gameOver) return;
+  if (locked()) return;
   const res = game.scramble();
   selection = [];
   animateOut(res.burnedTileIds, 'burnt');
@@ -350,12 +363,12 @@ function scramble() {
   }
   say('Shuffled! But scrambling started a fire somewhere up top.');
   render();
-  saveGame(game.state);
+  persist();
   if (res.gameOver) window.setTimeout(showGameOver, 400);
 }
 
 function confirmScramble() {
-  if (busy || game.state.gameOver) return;
+  if (locked()) return;
   showOverlay('Scramble the board?', '<p>Every letter gets shuffled, and a fire starts somewhere up top.</p>', [
     { label: 'Cancel', run: hideOverlay },
     {
@@ -374,16 +387,99 @@ function clearSelection() {
   renderSelection();
 }
 
-function newGame() {
-  saveGame(null);
+/** Swap in a different game and redraw the board from scratch. */
+function loadBoard(g: ClassicGame) {
   for (const el of tileEls.values()) el.remove();
   tileEls.clear();
-  game = new ClassicGame(dict, bonusWords, (Math.random() * 2 ** 32) >>> 0);
+  game = g;
   selection = [];
   hideOverlay();
-  say("Fresh shelf of letters. Spell a word and I'll eat it.");
   render();
-  saveGame(game.state);
+}
+
+function setMode(m: Mode) {
+  stopBlitz();
+  mode = m;
+  $('app').dataset.mode = m;
+  $('mode-chip').textContent = m === 'blitz' ? 'Blitz' : 'Classic';
+}
+
+/** Back to Classic, resuming the saved game if there is one. */
+function startClassic() {
+  setMode('classic');
+  loadBoard(startGame());
+  say(game.state.wordsPlayed > 0 ? `Welcome back! You're on level ${game.state.level}.` : "Spell a word and I'll eat it.");
+}
+
+function newGame() {
+  if (mode === 'blitz') return startBlitz();
+  saveGame(null);
+  loadBoard(freshGame());
+  say("Fresh shelf of letters. Spell a word and I'll eat it.");
+  persist();
+}
+
+/* ---------------- Blitz ---------------- */
+
+const BLITZ_MS = 60_000;
+let clockRunning = false;
+let blitzRun = 0; // bumps on every start/stop so stale countdown and clock timers do nothing
+let clockTimer = 0;
+
+function renderClock(ms: number) {
+  const secs = Math.ceil(Math.max(0, ms) / 1000);
+  const clock = $('clock');
+  clock.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+  clock.classList.toggle('low', ms > 0 && secs <= 10);
+}
+
+function stopBlitz() {
+  blitzRun++;
+  clockRunning = false;
+  clearInterval(clockTimer);
+  $('countdown').hidden = true;
+}
+
+/** A fresh board, a 3-2-1 countdown, then one minute on the clock. */
+function startBlitz() {
+  setMode('blitz');
+  loadBoard(freshGame());
+  renderClock(BLITZ_MS);
+  say('One minute! Feed me as many words as you can.');
+  const run = blitzRun;
+  const box = $('countdown');
+  const steps = ['3', '2', '1', 'Go!'];
+  steps.forEach((text, i) =>
+    window.setTimeout(() => {
+      if (run !== blitzRun) return;
+      box.hidden = false;
+      box.innerHTML = `<span>${text}</span>`;
+      if (i === steps.length - 1) runClock(run);
+    }, i * 700),
+  );
+  window.setTimeout(() => run === blitzRun && (box.hidden = true), steps.length * 700);
+}
+
+function runClock(run: number) {
+  const end = performance.now() + BLITZ_MS;
+  clockRunning = true;
+  clockTimer = window.setInterval(() => {
+    if (run !== blitzRun) return;
+    const left = end - performance.now();
+    renderClock(left);
+    if (left <= 0) timeUp();
+  }, 100);
+}
+
+function timeUp() {
+  stopBlitz();
+  if (game.state.gameOver) return; // the fire got there first; its results are already on the way
+  game.state.gameOver = true; // the engine refuses any more words
+  selection = [];
+  renderSelection();
+  say("Time's up! I'm stuffed.");
+  // Let a word already in flight land before the results appear.
+  window.setTimeout(() => showGameOver('time'), 800);
 }
 
 /* ---------------- Input: taps & drags ---------------- */
@@ -415,7 +511,7 @@ function dragInto(p: Pos) {
 }
 
 boardEl.addEventListener('pointerdown', (e) => {
-  if (busy || game.state.gameOver) return;
+  if (locked()) return;
   const p = posAt(e.clientX, e.clientY, false);
   if (!p) return;
   downPos = p;
@@ -455,7 +551,7 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') hideOverlay();
     return;
   }
-  if (e.metaKey || e.ctrlKey || e.altKey || busy || game.state.gameOver) return;
+  if (e.metaKey || e.ctrlKey || e.altKey || locked() || !$('splash').hidden) return;
   if (e.key === 'Enter') {
     e.preventDefault();
     submit();
@@ -489,25 +585,33 @@ function hideOverlay() {
   $('overlay').hidden = true;
 }
 
-function scoresHtml(highlight = -1) {
-  const scores = loadScores();
+function scoresHtml(m: Mode, highlight = -1) {
+  const scores = loadScores(m);
   if (!scores.length) return '';
-  return `<p class="label" style="color:#5b6b68">Best games on this device</p><ol class="scores">${scores
+  return `<p class="label" style="color:#5b6b68">Best ${m === 'blitz' ? 'Blitz rounds' : 'games'} on this device</p><ol class="scores">${scores
     .map((s, i) => `<li${i === highlight ? ' style="font-weight:700"' : ''}>${s.score.toLocaleString()} · level ${s.level}${s.best ? ` · ${s.best.toUpperCase()}` : ''}</li>`)
     .join('')}</ol>`;
 }
 
-function showGameOver() {
+function showGameOver(reason: 'fire' | 'time' = 'fire') {
   const s = game.state;
-  const rank = addScore({ score: s.score, level: s.level, best: s.bestWord?.word ?? '', date: new Date().toISOString() });
-  saveGame(null);
+  const blitz = mode === 'blitz';
+  stopBlitz();
+  const rank = addScore(mode, { score: s.score, level: s.level, best: s.bestWord?.word ?? '', date: new Date().toISOString() });
+  if (!blitz) saveGame(null);
+  const title =
+    rank === 0 ? (blitz ? 'New best Blitz round!' : 'New best game!') : reason === 'time' ? "Time's up!" : 'The library burned down';
+  const fed = `fed Rapunzel ${s.wordsPlayed} word${s.wordsPlayed === 1 ? '' : 's'}`;
   showOverlay(
-    rank === 0 ? 'New best game!' : 'The library burned down',
+    title,
     `<div class="final-score">${s.score.toLocaleString()}</div>
-     <p>You reached level ${s.level} and fed Rapunzel ${s.wordsPlayed} word${s.wordsPlayed === 1 ? '' : 's'}.${
+     <p>${blitz ? `You ${fed}${reason === 'fire' ? ' before the fire reached the bottom' : ' in one minute'}` : `You reached level ${s.level} and ${fed}`}.${
        s.bestWord ? ` Best word: <b>${s.bestWord.word.toUpperCase()}</b> for ${s.bestWord.points}.` : ''
-     }</p>${scoresHtml(rank)}`,
-    [{ label: 'Play again', primary: true, run: newGame }],
+     }</p>${scoresHtml(mode, rank)}`,
+    [
+      { label: 'Home', run: showHome },
+      { label: 'Play again', primary: true, run: newGame },
+    ],
   );
 }
 
@@ -523,7 +627,8 @@ function showHelp() {
       <li><b style="color:#c4320f">Burning tiles</b> burn the tile below each turn. Use them in a word to put them out. If one reaches the bottom, the game ends.</li>
       <li>Short words can start new fires, and so can <b>Scramble</b>.</li>
       <li>Spell the bonus word for extra points. Fill the hay bar to reach the next level.</li>
-    </ul>${scoresHtml()}`,
+      <li><b>Blitz</b> is the same game against a one-minute clock. Score as much as you can before time runs out.</li>
+    </ul>${scoresHtml(mode)}`,
     [{ label: 'Got it', primary: true, run: hideOverlay }],
   );
 }
@@ -555,6 +660,7 @@ $('btn-feed').addEventListener('click', submit);
 $('btn-clear').addEventListener('click', clearSelection);
 $('btn-scramble').addEventListener('click', confirmScramble);
 $('btn-new').addEventListener('click', () => confirmNewGame());
+$('btn-home').addEventListener('click', showHome);
 $('btn-help').addEventListener('click', showHelp);
 $('overlay').addEventListener('click', (e) => e.target === $('overlay') && !game.state.gameOver && hideOverlay());
 window.addEventListener('resize', () => fitBoard());
@@ -591,40 +697,59 @@ function playWelcome() {
   });
 }
 
-// Let Rapunzel finish her greeting before showing the board.
-function startFromSplash() {
+const homeButtons = () => [$<HTMLButtonElement>('btn-start'), $<HTMLButtonElement>('btn-blitz')];
+
+// Let Rapunzel finish her greeting before showing the board, then run `then` once the home screen has gone.
+function startFromSplash(then?: () => void) {
   const splash = $('splash');
-  $<HTMLButtonElement>('btn-start').disabled = true;
-  $<HTMLButtonElement>('btn-splash-new').disabled = true;
+  for (const b of homeButtons()) b.disabled = true;
   let left = false;
   const leave = () => {
     if (left) return;
     left = true;
     splash.classList.add('leaving');
-    window.setTimeout(() => (splash.hidden = true), 400);
+    window.setTimeout(() => {
+      splash.hidden = true;
+      then?.();
+    }, 400);
   };
   if (welcomeDone) return leave();
   afterWelcome = leave;
   window.setTimeout(leave, 4000); // never get stuck if the audio stalls
 }
 
-$('splash-version').textContent = `v${__APP_VERSION__}`;
-const startBtn = $<HTMLButtonElement>('btn-start');
-const inProgress = game.state.wordsPlayed > 0 && !game.state.gameOver;
-startBtn.textContent = inProgress ? 'Continue' : 'Play';
-startBtn.disabled = false;
-startBtn.addEventListener('click', startFromSplash);
-if (inProgress) {
-  const saved = $('splash-saved');
-  saved.textContent = `Game in progress: level ${game.state.level}, ${game.state.score.toLocaleString()} points`;
-  saved.hidden = false;
-  const newBtn = $('btn-splash-new');
-  newBtn.hidden = false;
-  newBtn.addEventListener('click', () => confirmNewGame(startFromSplash));
+/** Refresh the home screen's buttons from the Classic save. */
+function setupHome() {
+  const saved = loadGame();
+  const inProgress = !!saved && saved.wordsPlayed > 0 && !saved.gameOver;
+  $('btn-start').textContent = inProgress ? 'Continue' : 'Play Classic';
+  $('splash-saved').textContent = inProgress ? `Classic game in progress: level ${saved.level}, ${saved.score.toLocaleString()} points` : '';
+  $('splash-saved').hidden = !inProgress;
+  for (const b of homeButtons()) b.disabled = false;
 }
-startBtn.focus();
+
+function showHome() {
+  stopBlitz();
+  hideOverlay();
+  setupHome();
+  const splash = $('splash');
+  splash.classList.remove('leaving');
+  splash.hidden = false;
+  $('btn-start').focus();
+}
+
+$('btn-start').addEventListener('click', () => {
+  startClassic();
+  startFromSplash();
+});
+$('btn-blitz').addEventListener('click', () => {
+  setMode('blitz'); // shows the Blitz HUD behind the fading home screen
+  startFromSplash(startBlitz);
+});
+
+$('splash-version').textContent = `v${__APP_VERSION__}`;
+setupHome();
+$('btn-start').focus();
 playWelcome();
 
 fitBoard();
-if (game.state.wordsPlayed > 0) say(`Welcome back! You're on level ${game.state.level}.`);
-if (game.state.gameOver) showGameOver();

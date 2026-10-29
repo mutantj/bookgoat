@@ -103,6 +103,58 @@ body {
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
 }
+/* Blitz: the clock sits between the score and the level bar. */
+.clock-block {
+  display: none;
+  flex-direction: column;
+}
+.app[data-mode='blitz'] .hud {
+  grid-template-columns: auto auto auto 1fr;
+}
+.app[data-mode='blitz'] .clock-block {
+  display: flex;
+}
+/* No room for the level points next to the clock; the hay bar still shows progress. */
+.app[data-mode='blitz'] .progress-text {
+  display: none;
+}
+.clock {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.clock.low {
+  color: var(--ember);
+  animation: clock-pulse 1s ease-in-out infinite;
+}
+@keyframes clock-pulse {
+  50% { transform: scale(1.12); }
+}
+.countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 13;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  font-family: var(--font-display);
+  font-size: 6rem;
+  color: var(--marigold);
+  background: rgba(8, 20, 22, 0.55); /* dim the board so the numbers read over the letters */
+  -webkit-text-stroke: 3px var(--marigold-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+}
+.countdown span {
+  animation: count-pop 700ms ease both;
+}
+@keyframes count-pop {
+  from { transform: scale(1.8); opacity: 0; }
+  25% { transform: scale(1); opacity: 1; }
+  80% { opacity: 1; }
+  to { transform: scale(0.9); opacity: 0; }
+}
 .level-block {
   min-width: 0;
   display: flex;
@@ -450,6 +502,14 @@ body {
 }
 .btn-feed:hover:not(:disabled) {
   background: #ffc552;
+}
+.btn-blitz {
+  background: transparent;
+  border: 2px solid var(--marigold);
+  color: var(--marigold);
+}
+.btn-blitz:hover:not(:disabled) {
+  background: rgba(244, 182, 63, 0.12);
 }
 .btn:disabled {
   opacity: 0.45;
