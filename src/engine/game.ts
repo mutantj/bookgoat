@@ -13,7 +13,7 @@ import type { Dictionary } from './dictionary';
 import { Rng } from './rng';
 import { RULES, type GemKind } from './rules';
 
-export interface ClassicState {
+export interface GameState {
   board: Board;
   score: number;
   level: number;
@@ -58,15 +58,17 @@ export interface ScorePreview {
   valid: boolean;
 }
 
-export class ClassicGame {
-  state: ClassicState;
+export class Game {
+  state: GameState;
   private rng: Rng;
   private factory: TileFactory;
 
   constructor(
     private dict: Dictionary,
     private bonusWords: string[],
-    seedOrState: number | ClassicState = Date.now() >>> 0,
+    seedOrState: number | GameState = Date.now() >>> 0,
+    /** Added to a word's length when deciding which gem it earns. Not saved with the game. */
+    private gemLengthBonus = 0,
   ) {
     if (typeof seedOrState === 'number') {
       this.rng = new Rng(seedOrState);
@@ -156,7 +158,7 @@ export class ClassicGame {
     const created = removeAndRefill(this.board, this.positionsOf(usedIds), this.factory);
 
     // Long words leave a gem behind; short words risk a new fire.
-    let gemEarned = RULES.gemForLength(length);
+    let gemEarned = RULES.gemForLength(length + this.gemLengthBonus);
     if (bonusHit && !gemEarned) gemEarned = 'green';
     const candidates = created.filter((t) => t.kind === 'normal');
     if (gemEarned && candidates.length) this.rng.pick(candidates).kind = gemEarned;

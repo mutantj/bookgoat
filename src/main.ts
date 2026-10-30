@@ -1,23 +1,32 @@
 import './style.css';
-import enableText from './data/enable1.txt?raw';
-import bonusText from './data/bonus.txt?raw';
-import { dictionaryFromText, wordsFromText } from './engine/dictionary';
-import { ClassicGame, type TurnResult } from './engine/classic';
+import type { Game, TurnResult } from './engine/game';
 import { isAdjacent, samePos, type Pos, type Tile } from './engine/board';
 import { RULES } from './engine/rules';
 import { Goat } from './ui/goat';
-import { addScore, loadGame, loadScores, saveGame, type Mode } from './ui/storage';
+import { addScore, loadGame, loadScores } from './ui/storage';
+import type { EndReason, GameMode, ModeHost } from './modes/mode';
+import { createClassic } from './modes/classic';
+import { createBlitz } from './modes/blitz';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
 
 declare const __APP_VERSION__: string; // from package.json, see vite.config.ts
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
-const dict = dictionaryFromText(enableText);
-const bonusWords = wordsFromText(bonusText);
+const host: ModeHost = {
+  get game() {
+    return game;
+  },
+  say: (html) => say(html),
+  clearSelection: () => clearSelection(),
+  showGameOver: (reason) => showGameOver(reason),
+};
+const classic = createClassic(host);
+const blitz = createBlitz(host);
+const modes = [classic, blitz];
 
-let game = startGame();
-let mode: Mode = 'classic';
+let mode: GameMode = classic;
+let game = classic.enter();
 let selection: Pos[] = [];
 let busy = false; // during tile animations
 
@@ -26,29 +35,8 @@ const chainEl = $('chain') as unknown as SVGSVGElement;
 const goat = new Goat($('goat'));
 const tileEls = new Map<number, HTMLDivElement>();
 
-function startGame(): ClassicGame {
-  const saved = loadGame();
-  if (saved && !saved.gameOver) {
-    try {
-      return new ClassicGame(dict, bonusWords, saved);
-    } catch {
-      /* corrupt save — start fresh */
-    }
-  }
-  return freshGame();
-}
-
-function freshGame() {
-  return new ClassicGame(dict, bonusWords, (Math.random() * 2 ** 32) >>> 0);
-}
-
-/** Only Classic is saved; a Blitz round never touches the Classic save. */
-function persist() {
-  if (mode === 'classic') saveGame(game.state);
-}
-
-/** True while the board shouldn't take input: animating, game over, or a Blitz clock that isn't running. */
-const locked = () => busy || game.state.gameOver || (mode === 'blitz' && !clockRunning);
+/** True while the board shouldn't take input: animating, game over, or held by the mode (Blitz's countdown). */
+const locked = () => busy || game.state.gameOver || !mode.canPlay();
 
 /* ---------------- Geometry ---------------- */
 
@@ -200,7 +188,10 @@ function renderHud() {
 
 /* ---------------- Speech ---------------- */
 
-const say = (html: string) => ($('bubble').innerHTML = html);
+// A function declaration so modes can speak while the first game is being set up.
+function say(html: string) {
+  $('bubble').innerHTML = html;
+}
 const pick = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
 
 function sayForTurn(res: TurnResult) {
@@ -343,13 +334,14 @@ function submit() {
   });
   animateOut(res.burnedTileIds, 'burnt');
   render(false, res.newTileIds);
-  persist();
-  if (res.levelUp) toast(`Level ${game.state.level}! New bonus word: ${game.state.bonusWord.toUpperCase()}`);
+  mode.save(game);
+  const extra = mode.afterTurn(res);
+  if (res.levelUp) toast(`Level ${game.state.level}!${extra} New bonus word: ${game.state.bonusWord.toUpperCase()}`);
   else if (res.bonusHit) toast(`Bonus word! +${res.bonusPoints}`);
   window.setTimeout(() => {
     busy = false;
     renderSelection();
-    if (res.gameOver) showGameOver();
+    if (res.gameOver) showGameOver('fire');
   }, 380);
 }
 
@@ -363,8 +355,8 @@ function scramble() {
   }
   say('Shuffled! But scrambling started a fire somewhere up top.');
   render();
-  persist();
-  if (res.gameOver) window.setTimeout(showGameOver, 400);
+  mode.save(game);
+  if (res.gameOver) window.setTimeout(() => showGameOver('fire'), 400);
 }
 
 function confirmScramble() {
@@ -388,7 +380,7 @@ function clearSelection() {
 }
 
 /** Swap in a different game and redraw the board from scratch. */
-function loadBoard(g: ClassicGame) {
+function loadBoard(g: Game) {
   for (const el of tileEls.values()) el.remove();
   tileEls.clear();
   game = g;
@@ -397,102 +389,20 @@ function loadBoard(g: ClassicGame) {
   render();
 }
 
-function setMode(m: Mode) {
-  stopBlitz();
+/** Switch to a mode from the home screen. The board changes now; the mode begins once the home screen has gone. */
+function enterMode(m: GameMode) {
+  mode.stop();
   mode = m;
-  $('app').dataset.mode = m;
-  $('mode-chip').textContent = m === 'blitz' ? 'Blitz' : 'Classic';
-}
-
-/** Back to Classic, resuming the saved game if there is one. */
-function startClassic() {
-  setMode('classic');
-  loadBoard(startGame());
-  say(game.state.wordsPlayed > 0 ? `Welcome back! You're on level ${game.state.level}.` : "Spell a word and I'll eat it.");
+  $('app').dataset.mode = m.id;
+  $('mode-chip').textContent = m.name;
+  loadBoard(m.enter());
 }
 
 function newGame() {
-  if (mode === 'blitz') return startBlitz();
-  saveGame(null);
-  loadBoard(freshGame());
-  say("Fresh shelf of letters. Spell a word and I'll eat it.");
-  persist();
-}
-
-/* ---------------- Blitz ---------------- */
-
-const BLITZ_MS = 60_000;
-let clockRunning = false;
-let blitzRun = 0; // bumps on every start/stop so stale countdown and clock timers do nothing
-let clockTimer = 0;
-
-function renderClock(ms: number) {
-  const secs = Math.ceil(Math.max(0, ms) / 1000);
-  const clock = $('clock');
-  clock.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
-  clock.classList.toggle('low', ms > 0 && secs <= 10);
-}
-
-function stopBlitz() {
-  blitzRun++;
-  clockRunning = false;
-  clearInterval(clockTimer);
-  $('countdown').hidden = true;
-}
-
-/** A fresh board with a full clock, waiting for the countdown. */
-function setupBlitz() {
-  setMode('blitz');
-  loadBoard(freshGame());
-  renderClock(BLITZ_MS);
-  say('One minute! Feed me as many words as you can.');
-  // Dim the board straight away, so it doesn't flash up before the countdown starts.
-  const box = $('countdown');
-  box.innerHTML = '';
-  box.hidden = false;
-}
-
-function startBlitz() {
-  setupBlitz();
-  countIn();
-}
-
-/** 3-2-1, then one minute on the clock. */
-function countIn() {
-  const run = blitzRun;
-  const box = $('countdown');
-  const steps = ['3', '2', '1', 'Go!'];
-  steps.forEach((text, i) =>
-    window.setTimeout(() => {
-      if (run !== blitzRun) return;
-      box.hidden = false;
-      box.innerHTML = `<span>${text}</span>`;
-      if (i === steps.length - 1) runClock(run);
-    }, i * 700),
-  );
-  window.setTimeout(() => run === blitzRun && (box.hidden = true), steps.length * 700);
-}
-
-function runClock(run: number) {
-  const end = performance.now() + BLITZ_MS;
-  clockRunning = true;
-  clockTimer = window.setInterval(() => {
-    if (run !== blitzRun) return;
-    const left = end - performance.now();
-    renderClock(left);
-    if (left <= 0) timeUp();
-  }, 100);
-}
-
-function timeUp() {
-  stopBlitz();
-  if (game.state.gameOver) return; // the fire got there first; its results are already on the way
-  game.state.gameOver = true; // the engine refuses any more words
-  selection = [];
-  renderSelection();
-  say("Time's up! I'm stuffed.");
-  // Let a word already in flight land before the results appear.
-  window.setTimeout(() => showGameOver('time'), 800);
+  mode.stop();
+  loadBoard(mode.restart());
+  mode.save(game);
+  mode.begin();
 }
 
 /* ---------------- Input: taps & drags ---------------- */
@@ -598,27 +508,24 @@ function hideOverlay() {
   $('overlay').hidden = true;
 }
 
-function scoresHtml(m: Mode, highlight = -1) {
-  const scores = loadScores(m);
+function scoresHtml(m: GameMode, highlight = -1) {
+  const scores = loadScores(m.id);
   if (!scores.length) return '';
-  return `<p class="label" style="color:#5b6b68">Best ${m === 'blitz' ? 'Blitz rounds' : 'games'} on this device</p><ol class="scores">${scores
+  return `<p class="label" style="color:#5b6b68">Best ${m.scoresLabel} on this device</p><ol class="scores">${scores
     .map((s, i) => `<li${i === highlight ? ' style="font-weight:700"' : ''}>${s.score.toLocaleString()} · level ${s.level}${s.best ? ` · ${s.best.toUpperCase()}` : ''}</li>`)
     .join('')}</ol>`;
 }
 
-function showGameOver(reason: 'fire' | 'time' = 'fire') {
+function showGameOver(reason: EndReason) {
   const s = game.state;
-  const blitz = mode === 'blitz';
-  stopBlitz();
-  const rank = addScore(mode, { score: s.score, level: s.level, best: s.bestWord?.word ?? '', date: new Date().toISOString() });
-  if (!blitz) saveGame(null);
-  const title =
-    rank === 0 ? (blitz ? 'New best Blitz round!' : 'New best game!') : reason === 'time' ? "Time's up!" : 'The library burned down';
-  const fed = `fed Rapunzel ${s.wordsPlayed} word${s.wordsPlayed === 1 ? '' : 's'}`;
+  mode.stop();
+  const rank = addScore(mode.id, { score: s.score, level: s.level, best: s.bestWord?.word ?? '', date: new Date().toISOString() });
+  mode.save(null);
+  const title = rank === 0 ? mode.bestTitle : reason === 'time' ? "Time's up!" : 'The library burned down';
   showOverlay(
     title,
     `<div class="final-score">${s.score.toLocaleString()}</div>
-     <p>${blitz ? `You ${fed}${reason === 'fire' ? ' before the fire reached the bottom' : ' in one minute'}` : `You reached level ${s.level} and ${fed}`}.${
+     <p>${mode.summary(game, reason)}${
        s.bestWord ? ` Best word: <b>${s.bestWord.word.toUpperCase()}</b> for ${s.bestWord.points}.` : ''
      }</p>${scoresHtml(mode, rank)}`,
     [
@@ -640,7 +547,7 @@ function showHelp() {
       <li><b style="color:#c4320f">Burning tiles</b> burn the tile below each turn. Use them in a word to put them out. If one reaches the bottom, the game ends.</li>
       <li>Short words can start new fires, and so can <b>Scramble</b>.</li>
       <li>Spell the bonus word for extra points. Fill the hay bar to reach the next level.</li>
-      <li><b>Blitz</b> is the same game against a one-minute clock. Score as much as you can before time runs out.</li>
+      ${modes.map((m) => (m.help ? `<li>${m.help}</li>` : '')).join('')}
     </ul>${scoresHtml(mode)}`,
     [{ label: 'Got it', primary: true, run: hideOverlay }],
   );
@@ -749,7 +656,7 @@ function setupHome() {
 }
 
 function showHome() {
-  stopBlitz();
+  mode.stop();
   hideOverlay();
   setupHome();
   const splash = $('splash');
@@ -758,14 +665,13 @@ function showHome() {
   $('btn-start').focus();
 }
 
-$('btn-start').addEventListener('click', () => {
-  startClassic();
-  startFromSplash();
-});
-$('btn-blitz').addEventListener('click', () => {
-  setupBlitz(); // swap in the Blitz board now so the old one never shows as the home screen fades
-  startFromSplash(countIn);
-});
+// Swap in the mode's board before the home screen fades, so the old board never shows.
+for (const [button, m] of [['btn-start', classic], ['btn-blitz', blitz]] as const) {
+  $(button).addEventListener('click', () => {
+    enterMode(m);
+    startFromSplash(() => mode.begin());
+  });
+}
 
 $('splash-version').textContent = `v${__APP_VERSION__}`;
 setupHome();

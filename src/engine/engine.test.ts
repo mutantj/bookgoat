@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isAdjacent, isValidPath, neighbors, type Board, type Tile } from './board';
-import { ClassicGame, scoreTiles } from './classic';
+import { Game, scoreTiles } from './game';
 import { dictionaryFromText } from './dictionary';
 import { findPath } from './pathfind';
 import { RULES } from './rules';
@@ -82,7 +82,7 @@ describe('path finding for typed words', () => {
 });
 
 describe('classic game', () => {
-  const make = () => new ClassicGame(dict, ['banana'], 42);
+  const make = () => new Game(dict, ['banana'], 42);
 
   it('starts with a full 7×8 board', () => {
     const g = make();
@@ -170,14 +170,14 @@ describe('classic game', () => {
   it('round-trips through saved state', () => {
     const g = make();
     const saved = JSON.parse(JSON.stringify(g.state));
-    const g2 = new ClassicGame(dict, ['banana'], saved);
+    const g2 = new Game(dict, ['banana'], saved);
     g.scramble();
     g2.scramble();
     expect(g2.state.board).toEqual(g.state.board);
   });
 
   it('keeps a healthy share of vowels over a long game', () => {
-    const g = new ClassicGame(dict, ['banana'], 7);
+    const g = new Game(dict, ['banana'], 7);
     for (let i = 0; i < 50; i++) g.scramble();
     const letters = g.board.flat().map((t) => t.letter);
     const vowels = letters.filter((l) => 'AEIOU'.includes(l)).length;
