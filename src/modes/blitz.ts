@@ -2,10 +2,10 @@ import { freshGame, wordsFed, type GameMode, type ModeHost } from './mode';
 
 export const BLITZ = {
   seconds: 60,
-  /** Time added to the clock for each level reached. */
+  /** Reaching a level adds this many seconds times the new level (level 2 → 20, level 3 → 30). */
   levelUpSeconds: 10,
-  /** Gems come this many letters sooner than in Classic (6 letters → gold instead of green). */
-  gemLengthBonus: 1,
+  /** Gems come this many letters sooner than in Classic (4 letters → green, 6 → sapphire). */
+  gemLengthBonus: 2,
 };
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -86,7 +86,7 @@ export function createBlitz(host: ModeHost): GameMode {
     name: 'Blitz',
     scoresLabel: 'Blitz rounds',
     bestTitle: 'New best Blitz round!',
-    help: `<b>Blitz</b> is the same game against a one-minute clock. Score as much as you can before time runs out. Each new level adds ${BLITZ.levelUpSeconds} seconds, and gems come one letter sooner.`,
+    help: `<b>Blitz</b> is the same game against a one-minute clock. Score as much as you can before time runs out. Reaching a level adds ${BLITZ.levelUpSeconds} seconds for each level number (level 3 adds ${3 * BLITZ.levelUpSeconds}), and gems come ${BLITZ.gemLengthBonus} letter${BLITZ.gemLengthBonus === 1 ? '' : 's'} sooner.`,
 
     enter: setup,
     restart: setup,
@@ -96,8 +96,9 @@ export function createBlitz(host: ModeHost): GameMode {
     save() {}, // a round is over in a minute
     afterTurn(res) {
       if (!res.levelUp || !running) return '';
-      end += BLITZ.levelUpSeconds * 1000;
-      return ` +${BLITZ.levelUpSeconds} seconds.`;
+      const secs = host.game.state.level * BLITZ.levelUpSeconds;
+      end += secs * 1000;
+      return ` +${secs} seconds.`;
     },
     summary: (game, reason) => `You ${wordsFed(game)}${reason === 'fire' ? ' before the fire reached the bottom' : ' before time ran out'}.`,
   };
