@@ -6,7 +6,7 @@ compatibility_date = "2026-10-01"
 binding = "DB"
 database_name = "bookgoat-scores"
 # Replace with the id printed by `npx wrangler d1 create bookgoat-scores` (see README.md).
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "b7bccb53-7ea6-447c-82a6-57034f254f16"
 
 # Caps how often one connection can post. Counted in memory; nothing is stored.
 [[ratelimits]]
