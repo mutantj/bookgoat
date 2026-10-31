@@ -551,7 +551,7 @@ function onlineHtml(top: OnlineScore[], highlight = -1) {
   return `<ol class="scores">${top
     .map(
       (s, i) =>
-        `<li${i === highlight ? ' class="mine"' : ''}><b>${esc(s.initials)}</b> · ${s.score.toLocaleString()}${s.bestWord ? ` · ${esc(s.bestWord.toUpperCase())}` : ''}</li>`,
+        `<li${i === highlight ? ' class="mine"' : ''}><b>${esc(s.initials)}</b> · ${s.score.toLocaleString()} · level ${s.level}${s.bestWord ? ` · ${esc(s.bestWord.toUpperCase())}` : ''}</li>`,
     )
     .join('')}</ol>`;
 }
