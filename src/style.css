@@ -699,14 +699,6 @@ body {
   font-size: 2.6rem;
   color: var(--marigold);
 }
-.splash-bubble {
-  margin: 0;
-  background: var(--snow);
-  color: #22343a;
-  border-radius: 14px;
-  padding: 9px 16px;
-  font-size: 1.1rem;
-}
 .splash-saved {
   margin: 0;
   color: var(--mist);
