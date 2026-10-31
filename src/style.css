@@ -847,16 +847,23 @@ body {
 }
 
 /* ---------- Online leaderboard ---------- */
-.splash-boards {
+/* Each mode's button, with its small leaderboard button beside it. */
+.mode-row {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
   gap: 8px;
 }
-.splash .splash-boards .btn {
+.mode-row > .btn:first-child {
+  flex: 1;
+}
+.splash .btn-board {
   min-width: 0;
-  font-size: 0.85rem;
-  padding: 9px 12px;
+  padding: 0 10px;
+  display: grid;
+  place-items: center;
+  color: var(--marigold);
+}
+.btn-board[hidden] {
+  display: none;
 }
 .card .scores li.mine {
   font-weight: 700;

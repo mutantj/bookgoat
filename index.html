@@ -20,12 +20,14 @@
         <h1 class="splash-title">Bookgoat</h1>
         <p id="splash-saved" class="splash-saved" hidden></p>
         <div class="splash-actions">
-          <button id="btn-start" class="btn btn-feed" type="button" disabled>Loading…</button>
-          <button id="btn-blitz" class="btn btn-blitz" type="button" disabled>Blitz · 1 minute</button>
-        </div>
-        <div id="splash-boards" class="splash-boards" hidden>
-          <button id="btn-board-classic" class="btn btn-quiet" type="button">Classic leaderboard</button>
-          <button id="btn-board-blitz" class="btn btn-quiet" type="button">Blitz leaderboard</button>
+          <div class="mode-row">
+            <button id="btn-start" class="btn btn-feed" type="button" disabled>Loading…</button>
+            <button id="btn-board-classic" class="btn btn-board" type="button" aria-label="Classic leaderboard" title="Classic leaderboard" hidden></button>
+          </div>
+          <div class="mode-row">
+            <button id="btn-blitz" class="btn btn-blitz" type="button" disabled>Blitz · 1 minute</button>
+            <button id="btn-board-blitz" class="btn btn-board" type="button" aria-label="Blitz leaderboard" title="Blitz leaderboard" hidden></button>
+          </div>
         </div>
         <p id="splash-version" class="splash-version"></p>
       </div>

@@ -9,6 +9,7 @@ import type { EndReason, GameMode, ModeHost, ModeId } from './modes/mode';
 import { createClassic } from './modes/classic';
 import { createBlitz } from './modes/blitz';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
+import leaderboardIcon from '../art/leaderboard.svg?raw';
 
 declare const __APP_VERSION__: string; // from package.json, see vite.config.ts
 
@@ -754,9 +755,10 @@ for (const [button, m] of [['btn-start', classic], ['btn-blitz', blitz]] as cons
 }
 
 for (const [button, m] of [['btn-board-classic', classic], ['btn-board-blitz', blitz]] as const) {
+  $(button).innerHTML = leaderboardIcon.replace(/<\?xml[^>]*\?>|<!--[\s\S]*?-->/g, '').trim();
+  $(button).hidden = !leaderboardEnabled;
   $(button).addEventListener('click', () => void showLeaderboard(m));
 }
-$('splash-boards').hidden = !leaderboardEnabled;
 // Post any scores saved while offline, now and whenever the connection comes back.
 void flushPending();
 window.addEventListener('online', () => void flushPending());

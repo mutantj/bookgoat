@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The leaderboard button icon on the home screen. Fills use currentColor so the button sets the colour. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+  <rect x="9" y="4" width="6" height="17" rx="1"/>
+  <rect x="2" y="9" width="6" height="12" rx="1"/>
+  <rect x="16" y="12" width="6" height="9" rx="1"/>
+</svg>
