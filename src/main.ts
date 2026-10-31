@@ -3,8 +3,9 @@ import type { Game, TurnResult } from './engine/game';
 import { isAdjacent, samePos, type Pos, type Tile } from './engine/board';
 import { RULES } from './engine/rules';
 import { Goat } from './ui/goat';
-import { addScore, loadGame, loadScores } from './ui/storage';
-import type { EndReason, GameMode, ModeHost } from './modes/mode';
+import { addScore, loadGame, loadInitials, loadScores, saveInitials } from './ui/storage';
+import { fetchTop, flushPending, leaderboardEnabled, pendingCount, postScore, qualifies, type OnlineScore } from './ui/leaderboard';
+import type { EndReason, GameMode, ModeHost, ModeId } from './modes/mode';
 import { createClassic } from './modes/classic';
 import { createBlitz } from './modes/blitz';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
@@ -488,7 +489,10 @@ window.addEventListener('keydown', (e) => {
 
 /* ---------------- Overlays ---------------- */
 
+let overlayGen = 0; // bumps whenever the overlay changes, so late network replies don't touch a newer one
+
 function showOverlay(title: string, body: string, actions: { label: string; primary?: boolean; run: () => void }[]) {
+  overlayGen++;
   $('overlay-title').textContent = title;
   $('overlay-body').innerHTML = body;
   const box = $('overlay-actions');
@@ -505,6 +509,7 @@ function showOverlay(title: string, body: string, actions: { label: string; prim
   (box.querySelector('.btn-feed') as HTMLElement | null)?.focus();
 }
 function hideOverlay() {
+  overlayGen++;
   $('overlay').hidden = true;
 }
 
@@ -527,12 +532,87 @@ function showGameOver(reason: EndReason) {
     `<div class="final-score">${s.score.toLocaleString()}</div>
      <p>${mode.summary(game, reason)}${
        s.bestWord ? ` Best word: <b>${s.bestWord.word.toUpperCase()}</b> for ${s.bestWord.points}.` : ''
-     }</p>${scoresHtml(mode, rank)}`,
+     }</p><div id="online-entry"></div>${scoresHtml(mode, rank)}`,
     [
       { label: 'Home', run: showHome },
       { label: 'Play again', primary: true, run: newGame },
     ],
   );
+  void offerOnline(mode, s.score, s.level, s.bestWord?.word ?? '');
+}
+
+/* ---------------- Online leaderboard ---------------- */
+
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+function onlineHtml(top: OnlineScore[], highlight = -1) {
+  if (!top.length) return '<p>No scores yet. Be the first!</p>';
+  return `<ol class="scores">${top
+    .map(
+      (s, i) =>
+        `<li${i === highlight ? ' class="mine"' : ''}><b>${esc(s.initials)}</b> · ${s.score.toLocaleString()}${s.bestWord ? ` · ${esc(s.bestWord.toUpperCase())}` : ''}</li>`,
+    )
+    .join('')}</ol>`;
+}
+
+function waitingHtml(board: ModeId) {
+  const n = pendingCount(board);
+  return n ? `<p class="lb-note">${n} of your scores ${n === 1 ? 'is' : 'are'} waiting to post.</p>` : '';
+}
+
+async function showLeaderboard(m: GameMode) {
+  showOverlay(`${m.name} leaderboard`, '<p class="lb-note">Loading…</p>', [{ label: 'Close', primary: true, run: hideOverlay }]);
+  const gen = overlayGen;
+  await flushPending();
+  const top = await fetchTop(m.id);
+  if (gen !== overlayGen) return;
+  $('overlay-body').innerHTML = top
+    ? onlineHtml(top) + waitingHtml(m.id)
+    : `<p>You're offline. The leaderboard needs a connection.</p>${waitingHtml(m.id)}`;
+}
+
+/** At game over, ask for initials if the score would make the online top 10. Offline, it's saved to post later. */
+async function offerOnline(m: GameMode, score: number, level: number, bestWord: string) {
+  const gen = overlayGen;
+  if (!(await qualifies(m.id, score))) return void flushPending();
+  if (gen !== overlayGen) return;
+  const box = $('online-entry');
+  box.innerHTML = `<form class="initials-form">
+      <label for="initials">You made the ${m.name} leaderboard! Your initials:</label>
+      <div class="initials-row">
+        <input id="initials" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(loadInitials())}" />
+        <button class="btn btn-feed" type="submit">Post</button>
+      </div>
+      <p class="lb-note" aria-live="polite"></p>
+    </form>`;
+  const form = box.querySelector('form')!;
+  const input = form.querySelector('input')!;
+  const button = form.querySelector('button')!;
+  const note = form.querySelector('.lb-note')!;
+  input.addEventListener('input', () => (input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3)));
+  input.focus();
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const initials = input.value;
+    if (!/^[A-Z]{3}$/.test(initials)) return void (note.textContent = 'Three letters, please.');
+    button.disabled = true;
+    note.textContent = 'Posting…';
+    saveInitials(initials);
+    const res = await postScore({ board: m.id, initials, score, level, bestWord, version: __APP_VERSION__, playedAt: new Date().toISOString() });
+    if (gen !== overlayGen) return;
+    if (res.status === 'posted') {
+      // Equal scores list oldest first, so this score is the last match.
+      const mine = res.top.map((t) => t.initials === initials && t.score === score).lastIndexOf(true);
+      box.innerHTML = `<p class="label" style="color:#5b6b68">${m.name} leaderboard</p>${onlineHtml(res.top, mine)}${
+        mine < 0 ? `<p class="lb-note">Posted at number ${res.rank}.</p>` : ''
+      }`;
+    } else if (res.status === 'queued') {
+      box.innerHTML = `<p class="lb-note">Saved. Your score will post next time you're online.</p>`;
+    } else {
+      button.disabled = false;
+      note.textContent = res.error === 'blocked-initials' ? 'Try different initials.' : "Sorry, that score couldn't be posted.";
+    }
+  });
 }
 
 function showHelp() {
@@ -672,6 +752,14 @@ for (const [button, m] of [['btn-start', classic], ['btn-blitz', blitz]] as cons
     startFromSplash(() => mode.begin());
   });
 }
+
+for (const [button, m] of [['btn-board-classic', classic], ['btn-board-blitz', blitz]] as const) {
+  $(button).addEventListener('click', () => void showLeaderboard(m));
+}
+$('splash-boards').hidden = !leaderboardEnabled;
+// Post any scores saved while offline, now and whenever the connection comes back.
+void flushPending();
+window.addEventListener('online', () => void flushPending());
 
 $('splash-version').textContent = `v${__APP_VERSION__}`;
 setupHome();

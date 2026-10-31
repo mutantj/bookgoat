@@ -42,3 +42,34 @@ export function addScore(mode: ModeId, entry: HighScore): number {
   write(SCORES_KEY[mode], top);
   return top.indexOf(entry);
 }
+
+/* ---------------- Online leaderboard (see leaderboard.ts) ---------------- */
+
+/** A score waiting to be posted, kept on the device while offline. */
+export interface PendingScore {
+  board: ModeId;
+  initials: string;
+  score: number;
+  level: number;
+  bestWord: string;
+  version: string;
+  playedAt: string;
+}
+/** What the device last saw of a board: how many entries, and the lowest score in the top 10. */
+export interface BoardCutoff {
+  count: number;
+  lowest: number;
+}
+
+const PENDING_KEY = 'bookgoat.pending.v1';
+const CUTOFFS_KEY = 'bookgoat.cutoffs.v1';
+const INITIALS_KEY = 'bookgoat.initials.v1';
+
+export const loadPending = () => read<PendingScore[]>(PENDING_KEY) ?? [];
+export const savePending = (q: PendingScore[]) => write(PENDING_KEY, q.length ? q : null);
+export const loadCutoff = (board: ModeId) => read<Partial<Record<ModeId, BoardCutoff>>>(CUTOFFS_KEY)?.[board] ?? null;
+export function saveCutoff(board: ModeId, cutoff: BoardCutoff) {
+  write(CUTOFFS_KEY, { ...read<Partial<Record<ModeId, BoardCutoff>>>(CUTOFFS_KEY), [board]: cutoff });
+}
+export const loadInitials = () => read<string>(INITIALS_KEY) ?? '';
+export const saveInitials = (initials: string) => write(INITIALS_KEY, initials);

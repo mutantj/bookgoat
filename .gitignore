@@ -1,6 +1,7 @@
 node_modules
 dist
 dist-single
+.env.local
 
 # Audacity project files (only the exported .wav is used)
 audio/*.aup3
