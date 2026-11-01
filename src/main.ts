@@ -9,6 +9,7 @@ import type { EndReason, GameMode, ModeHost, ModeId } from './modes/mode';
 import { createClassic } from './modes/classic';
 import { createBlitz } from './modes/blitz';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
+import boardResetUrl from '../audio/export/boardreset.wav';
 import leaderboardIcon from '../art/leaderboard.svg?raw';
 
 declare const __APP_VERSION__: string; // from package.json, see vite.config.ts
@@ -347,9 +348,18 @@ function submit() {
   }, 380);
 }
 
+/** Played whenever a fresh board appears, and on Scramble. */
+const boardReset = new Audio(boardResetUrl);
+boardReset.preload = 'auto'; // ready before the first board drops
+function playBoardReset() {
+  boardReset.currentTime = 0;
+  boardReset.play().catch(() => {}); // sound is a nice-to-have; never block the game on it
+}
+
 function scramble() {
   if (locked()) return;
   const res = game.scramble();
+  playBoardReset();
   selection = [];
   animateOut(res.burnedTileIds, 'burnt');
   for (const el of tileEls.values()) {
@@ -381,13 +391,19 @@ function clearSelection() {
   renderSelection();
 }
 
-/** Swap in a different game and redraw the board from scratch. */
-function loadBoard(g: Game) {
+/** Swap in a different game. Its tiles drop in with the board-reset sound, now or later with dropTiles(). */
+function loadBoard(g: Game, drop = true) {
   for (const el of tileEls.values()) el.remove();
   tileEls.clear();
   game = g;
   selection = [];
   hideOverlay();
+  if (drop) dropTiles();
+  else renderHud();
+}
+
+function dropTiles() {
+  playBoardReset(); // started first so the sound lands with the tiles
   render();
 }
 
@@ -397,7 +413,7 @@ function enterMode(m: GameMode) {
   mode = m;
   $('app').dataset.mode = m.id;
   $('mode-chip').textContent = m.name;
-  loadBoard(m.enter());
+  loadBoard(m.enter(), false); // the tiles drop in once the home screen has gone
 }
 
 function newGame() {
@@ -750,7 +766,10 @@ function showHome() {
 for (const [button, m] of [['btn-start', classic], ['btn-blitz', blitz]] as const) {
   $(button).addEventListener('click', () => {
     enterMode(m);
-    startFromSplash(() => mode.begin());
+    startFromSplash(() => {
+      dropTiles();
+      mode.begin();
+    });
   });
 }
 
