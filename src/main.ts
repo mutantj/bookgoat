@@ -10,6 +10,8 @@ import { createClassic } from './modes/classic';
 import { createBlitz } from './modes/blitz';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
 import boardResetUrl from '../audio/export/boardreset.wav';
+import tileSelectUrl from '../audio/export/tileselect.wav';
+import { loadEffect } from './ui/sound';
 import leaderboardIcon from '../art/leaderboard.svg?raw';
 
 declare const __APP_VERSION__: string; // from package.json, see vite.config.ts
@@ -429,16 +431,19 @@ let downPos: Pos | null = null;
 let dragging = false;
 let pointerId: number | null = null;
 
+const playTileSelect = loadEffect(tileSelectUrl);
+
 function tap(p: Pos) {
   const idx = selection.findIndex((q) => samePos(q, p));
   const last = selection.at(-1);
-  if (!last) selection = [p];
-  else if (samePos(last, p)) {
+  if (samePos(last ?? { c: -1, r: -1 }, p)) {
     if (game.preview(selection).valid) return submit();
     selection.pop();
   } else if (idx >= 0) selection = selection.slice(0, idx + 1);
-  else if (isAdjacent(last, p)) selection.push(p);
-  else selection = [p];
+  else {
+    selection = last && isAdjacent(last, p) ? [...selection, p] : [p];
+    playTileSelect();
+  }
   renderSelection();
 }
 
@@ -447,7 +452,10 @@ function dragInto(p: Pos) {
   if (samePos(last, p)) return;
   const prev = selection.at(-2);
   if (prev && samePos(prev, p)) selection.pop(); // backtrack
-  else if (!selection.some((q) => samePos(q, p)) && isAdjacent(last, p)) selection.push(p);
+  else if (!selection.some((q) => samePos(q, p)) && isAdjacent(last, p)) {
+    selection.push(p);
+    playTileSelect();
+  }
   renderSelection();
 }
 
@@ -467,7 +475,10 @@ boardEl.addEventListener('pointermove', (e) => {
   if (!dragging) {
     dragging = true;
     const last = selection.at(-1);
-    if (!last || !samePos(last, downPos)) selection = [downPos];
+    if (!last || !samePos(last, downPos)) {
+      selection = [downPos];
+      playTileSelect();
+    }
   }
   dragInto(p);
 });
