@@ -46,12 +46,23 @@ const locked = () => busy || game.state.gameOver || !mode.canPlay();
 /* ---------------- Geometry ---------------- */
 
 let cell = 48;
+
+// In a mobile browser the address bar slides in and out as the page moves, changing innerHeight and
+// firing resize. Size against the small viewport height (100svh: the height with the bars showing),
+// which holds still, so the board doesn't keep growing and shrinking.
+const heightProbe = document.createElement('div');
+heightProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:100vh;height:100svh';
+document.body.appendChild(heightProbe);
+const stableHeight = () => heightProbe.offsetHeight || window.innerHeight;
+
+let fitted = { w: 0, h: 0 };
 function fitBoard() {
+  fitted = { w: window.innerWidth, h: stableHeight() };
   const wide = window.innerWidth >= 900;
   const availW = wide ? 560 : boardEl.parentElement!.clientWidth;
   // On phones keep the whole game on one screen: subtract the HUD, goat and controls.
   const reserved = wide ? 200 : 330;
-  const availH = Math.max(window.innerHeight - reserved, 300);
+  const availH = Math.max(fitted.h - reserved, 300);
   cell = Math.floor(Math.max(36, Math.min(availW / RULES.cols, availH / (RULES.rows + 0.5), 78)));
   document.documentElement.style.setProperty('--s', `${cell}px`);
   render(true);
@@ -691,7 +702,10 @@ $('btn-new').addEventListener('click', () => confirmNewGame());
 $('btn-home').addEventListener('click', showHome);
 $('btn-help').addEventListener('click', showHelp);
 $('overlay').addEventListener('click', (e) => e.target === $('overlay') && !game.state.gameOver && hideOverlay());
-window.addEventListener('resize', () => fitBoard());
+// Refit only when the space really changes (rotation, a resized window), not when browser bars come and go.
+window.addEventListener('resize', () => {
+  if (window.innerWidth !== fitted.w || stableHeight() !== fitted.h) fitBoard();
+});
 // iOS Safari ignores user-scalable=no, so block pinch zoom directly.
 for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, (e) => e.preventDefault());
 document.addEventListener('touchmove', (e) => e.touches.length > 1 && e.preventDefault(), { passive: false });
