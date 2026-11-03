@@ -121,6 +121,23 @@ describe('classic game', () => {
     expect(g.board.flat().some((t) => t.kind === 'green')).toBe(true);
   });
 
+  it('maxBurnLength stops longer words starting a fire', () => {
+    const board = ['CATSXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX'];
+    const fires = (length: number, maxBurnLength?: number) => {
+      let n = 0;
+      for (let seed = 1; seed <= 200; seed++) {
+        const g = new Game(dict, ['banana'], seed, { maxBurnLength });
+        g.state.board = boardFrom(board);
+        const res = g.submit([0, 1, 2, 3].slice(0, length).map((r) => ({ c: 0, r })));
+        if (res.ok && res.spawnedBurning.length) n++;
+      }
+      return n;
+    };
+    expect(fires(4)).toBeGreaterThan(0);
+    expect(fires(4, 3)).toBe(0);
+    expect(fires(3, 3)).toBeGreaterThan(0);
+  });
+
   it('spelling the bonus word pays the bonus once', () => {
     const g = make();
     expect(g.state.bonusWord).toBe('banana');

@@ -1,7 +1,7 @@
 import enableText from '../data/enable1.txt?raw';
 import bonusText from '../data/bonus.txt?raw';
 import { dictionaryFromText, wordsFromText } from '../engine/dictionary';
-import { Game, type GameState, type TurnResult } from '../engine/game';
+import { Game, type GameOptions, type GameState, type TurnResult } from '../engine/game';
 
 export type ModeId = 'classic' | 'blitz';
 export type EndReason = 'fire' | 'time';
@@ -9,8 +9,8 @@ export type EndReason = 'fire' | 'time';
 const dict = dictionaryFromText(enableText);
 const bonusWords = wordsFromText(bonusText);
 
-export function freshGame(gemLengthBonus = 0) {
-  return new Game(dict, bonusWords, (Math.random() * 2 ** 32) >>> 0, gemLengthBonus);
+export function freshGame(options: GameOptions = {}) {
+  return new Game(dict, bonusWords, (Math.random() * 2 ** 32) >>> 0, options);
 }
 export const resumeGame = (saved: GameState) => new Game(dict, bonusWords, saved);
 

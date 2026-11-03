@@ -6,6 +6,8 @@ export const BLITZ = {
   levelUpSeconds: 10,
   /** Gems come this many letters sooner than in Classic (4 letters → green, 6 → sapphire). */
   gemLengthBonus: 2,
+  /** Only words this short can start a fire, so a gem word never brings one. */
+  maxBurnLength: 3,
 };
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -40,7 +42,7 @@ export function createBlitz(host: ModeHost): GameMode {
     const box = $('countdown');
     box.innerHTML = '';
     box.hidden = false;
-    return freshGame(BLITZ.gemLengthBonus);
+    return freshGame({ gemLengthBonus: BLITZ.gemLengthBonus, maxBurnLength: BLITZ.maxBurnLength });
   }
 
   /** 3-2-1, then one minute on the clock. */
@@ -86,7 +88,7 @@ export function createBlitz(host: ModeHost): GameMode {
     name: 'Blitz',
     scoresLabel: 'Blitz rounds',
     bestTitle: 'New best Blitz round!',
-    help: `<b>Blitz</b> is the same game against a one-minute clock. Score as much as you can before time runs out. Reaching a level adds ${BLITZ.levelUpSeconds} seconds for each level number (level 3 adds ${3 * BLITZ.levelUpSeconds}), and gems come ${BLITZ.gemLengthBonus} letter${BLITZ.gemLengthBonus === 1 ? '' : 's'} sooner.`,
+    help: `<b>Blitz</b> is the same game against a one-minute clock. Score as much as you can before time runs out. Reaching a level adds ${BLITZ.levelUpSeconds} seconds for each level number (level 3 adds ${3 * BLITZ.levelUpSeconds}), and gems come ${BLITZ.gemLengthBonus} letter${BLITZ.gemLengthBonus === 1 ? '' : 's'} sooner. Only ${BLITZ.maxBurnLength}-letter words can start a fire.`,
 
     enter: setup,
     restart: setup,

@@ -58,6 +58,14 @@ export interface ScorePreview {
   valid: boolean;
 }
 
+/** Rule tweaks a mode can make on top of RULES. Not saved with the game. */
+export interface GameOptions {
+  /** Added to a word's length when deciding which gem it earns. */
+  gemLengthBonus?: number;
+  /** Only words this long or shorter can start a fire. */
+  maxBurnLength?: number;
+}
+
 export class Game {
   state: GameState;
   private rng: Rng;
@@ -67,8 +75,7 @@ export class Game {
     private dict: Dictionary,
     private bonusWords: string[],
     seedOrState: number | GameState = Date.now() >>> 0,
-    /** Added to a word's length when deciding which gem it earns. Not saved with the game. */
-    private gemLengthBonus = 0,
+    private options: GameOptions = {},
   ) {
     if (typeof seedOrState === 'number') {
       this.rng = new Rng(seedOrState);
@@ -158,7 +165,7 @@ export class Game {
     const created = removeAndRefill(this.board, this.positionsOf(usedIds), this.factory);
 
     // Long words leave a gem behind; short words risk a new fire.
-    let gemEarned = RULES.gemForLength(length + this.gemLengthBonus);
+    let gemEarned = RULES.gemForLength(length + (this.options.gemLengthBonus ?? 0));
     if (bonusHit && !gemEarned) gemEarned = 'green';
     const candidates = created.filter((t) => t.kind === 'normal');
     if (gemEarned && candidates.length) this.rng.pick(candidates).kind = gemEarned;
@@ -255,6 +262,7 @@ export class Game {
   }
 
   private maybeSpawnBurning(wordLength: number, created: Tile[]): number[] {
+    if (wordLength > (this.options.maxBurnLength ?? Infinity)) return [];
     const base = RULES.burn.spawnChanceByLength[wordLength] ?? 0;
     if (base <= 0) return [];
     const onBoard = this.board.flat().filter((t) => t.kind === 'burning').length;
