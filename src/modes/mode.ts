@@ -6,7 +6,7 @@ import { Game, type GameOptions, type GameState, type TurnResult } from '../engi
 export type ModeId = 'classic' | 'blitz';
 export type EndReason = 'fire' | 'time';
 
-const dict = dictionaryFromText(enableText);
+export const dict = dictionaryFromText(enableText);
 const bonusWords = wordsFromText(bonusText);
 
 export function freshGame(options: GameOptions = {}) {

@@ -1,0 +1,358 @@
+/* Adventure: one portrait screen. Top bar, the battle (takes whatever height is left), word bar, 4×4 board, buttons. */
+.adventure {
+  /* Tile size: fill the width left between the power-ups and the enemy notes, but leave the battle at least ~170px on short screens. Uses the small
+     viewport height (svh) so the board doesn't change size as mobile browser bars come and go. */
+  --s: max(40px, min(calc((min(100vw, 492px) - 216px) / 4), 72px, calc((100vh - 440px) / 4)));
+  --s: max(40px, min(calc((min(100vw, 492px) - 216px) / 4), 72px, calc((100svh - 440px) / 4)));
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: max(10px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-left, 0px));
+  background: radial-gradient(120% 70% at 50% 0%, #22474c 0%, var(--night) 60%), var(--night);
+  overflow: hidden;
+}
+.adventure[hidden] {
+  display: none;
+}
+.adventure > :not(.overlay) {
+  width: 100%;
+  max-width: 460px;
+}
+
+/* ---------- Top bar ---------- */
+.adv-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px 10px;
+  border-radius: 14px;
+  background: var(--ridge);
+  border: 1px solid var(--ridge-line);
+}
+.adv-top-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+/* Rapunzel's health on the left, the enemy's on the right, filling toward the middle. */
+.adv-health {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.adv-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.adv-bar-foe .adv-name-row {
+  flex-direction: row-reverse;
+}
+.adv-bar-foe .adv-hp {
+  transform: scaleX(-1);
+}
+.adv-home {
+  padding: 8px 12px;
+}
+.adv-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.adv-stage {
+  font-family: var(--font-display);
+  color: var(--marigold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.adv-chip {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--ridge);
+  border: 1px solid var(--ridge-line);
+  color: var(--mist);
+  white-space: nowrap;
+}
+
+/* ---------- Battle ---------- */
+.adv-arena {
+  position: relative;
+  flex: 1;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--ridge-line);
+  overflow: hidden;
+  container-type: size; /* fighters scale with the height left over */
+  /* Dusk sky over the mountain path. */
+  background:
+    linear-gradient(180deg, transparent 72%, #2d4a2a 72%, #24401f 100%),
+    linear-gradient(180deg, #34596a 0%, #5d7d83 45%, #c9a874 100%);
+}
+/* Far mountains behind the fighters. */
+.adv-arena::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 28% 0;
+  height: 45%;
+  background: #2f4f57;
+  clip-path: polygon(0 70%, 14% 30%, 26% 58%, 42% 8%, 58% 52%, 70% 26%, 86% 60%, 100% 34%, 100% 100%, 0 100%);
+  opacity: 0.8;
+}
+.adv-arena > * {
+  position: relative;
+}
+.adv-bubble {
+  align-self: center;
+  max-width: 92%;
+  background: var(--snow);
+  color: #22343a;
+  border-radius: 14px;
+  padding: 7px 12px;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+.adv-fighters {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+.adv-fighter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(42%, 150px);
+  transition: transform 200ms ease;
+}
+.adv-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+.adv-name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.adv-hp-text {
+  font-variant-numeric: tabular-nums;
+  color: var(--snow);
+}
+.adv-hp {
+  height: 9px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+.adv-hp-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--gem-green);
+  transition: width 400ms ease;
+}
+.adv-bar-foe .adv-hp-fill {
+  background: var(--ember);
+}
+.adv-bar-hero.low .adv-hp-fill {
+  animation: adv-low 0.9s ease-in-out infinite alternate;
+}
+@keyframes adv-low {
+  to { background: var(--bad); }
+}
+.adv-sprite {
+  width: min(100%, 140px, 60cqh);
+  align-self: center;
+}
+.adv-sprite svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.adv-foe .adv-sprite svg {
+  filter: hue-rotate(var(--hue, 0deg));
+}
+
+.adv-hero.lunge {
+  transform: translateX(22px);
+}
+.adv-foe.lunge {
+  transform: translateX(-22px);
+}
+.adv-fighter.hurt .adv-sprite {
+  animation: adv-hurt 420ms ease;
+}
+@keyframes adv-hurt {
+  20%, 60% { transform: translateX(-5px); opacity: 0.5; }
+  40%, 80% { transform: translateX(5px); opacity: 1; }
+}
+.adv-foe.defeated .adv-sprite {
+  transform: translateY(14px) rotate(-12deg);
+  opacity: 0;
+  transition: transform 600ms ease, opacity 600ms ease;
+}
+.adv-pop {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  z-index: 2;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--bad);
+  text-shadow: 0 2px 0 #3a0d05, 0 0 8px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation: adv-pop 1s ease-out forwards;
+}
+@keyframes adv-pop {
+  from { transform: translate(-50%, 0); opacity: 1; }
+  to { transform: translate(-50%, -48px); opacity: 0; }
+}
+
+/* ---------- Word bar, board, buttons ---------- */
+.adventure .adv-word-bar {
+  width: 100%;
+}
+/* Power-ups | board | enemy notes */
+.adv-play {
+  display: grid;
+  grid-template-columns: 52px auto minmax(0, 1fr);
+  gap: 8px;
+}
+.adv-powers {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+.adv-power {
+  position: relative;
+  flex: 1;
+  max-height: 72px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid var(--ridge-line);
+  background: var(--ridge);
+  cursor: pointer;
+}
+.adv-power:hover:not(:disabled) {
+  background: #2a5257;
+}
+.adv-power:focus-visible {
+  outline: 3px solid var(--marigold);
+  outline-offset: 2px;
+}
+.adv-power:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.adv-power-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.adv-power-count {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--marigold);
+  color: var(--marigold-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.adv-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--ridge);
+  border: 1px solid var(--ridge-line);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  overflow: auto;
+}
+.adv-info-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--marigold);
+}
+.adv-info-hit {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+.adv-info-powers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.adv-info-powers b {
+  display: block;
+  color: var(--snow);
+}
+.adv-info-powers li {
+  color: var(--mist);
+}
+.adv-board {
+  display: grid;
+  grid-template-columns: repeat(4, var(--s));
+  gap: 6px;
+  padding: 6px;
+  width: auto !important;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #2a5156, #1d3d41);
+  box-shadow: inset 0 0 0 1px var(--ridge-line);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.adv-board .tile {
+  position: relative;
+  padding: 0;
+}
+.adv-board .tile.drop {
+  animation: adv-drop 320ms cubic-bezier(0.45, 0.05, 0.55, 1.12) both;
+}
+@keyframes adv-drop {
+  from { transform: translateY(-40%); opacity: 0; }
+}
+.adv-controls {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+}
+.adv-controls .btn-feed {
+  font-size: 1.05rem;
+}

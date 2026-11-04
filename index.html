@@ -28,6 +28,7 @@
             <button id="btn-blitz" class="btn btn-blitz" type="button" disabled>Blitz · 1 minute</button>
             <button id="btn-board-blitz" class="btn btn-board" type="button" aria-label="Blitz leaderboard" title="Blitz leaderboard" hidden></button>
           </div>
+          <button id="btn-adventure" class="btn btn-blitz" type="button" disabled>Adventure (preview)</button>
         </div>
         <p id="splash-version" class="splash-version"></p>
       </div>
@@ -114,6 +115,62 @@
       <div id="toast" class="toast" hidden></div>
       <div id="fly-layer" class="fly-layer" aria-hidden="true"></div>
       <div id="countdown" class="countdown" aria-live="assertive" hidden></div>
+    </div>
+    <div id="adventure" class="adventure" hidden>
+      <header class="adv-top">
+        <div class="adv-top-row">
+          <button id="adv-home" class="btn adv-home" type="button">Home</button>
+          <div class="adv-title">
+            <span class="label">Chapter 1</span>
+            <span id="adv-stage" class="adv-stage"></span>
+          </div>
+          <span id="adv-battle" class="adv-chip"></span>
+        </div>
+        <div class="adv-health">
+          <div id="adv-hero-bar" class="adv-bar adv-bar-hero">
+            <div class="adv-name-row"><span class="adv-name">Rapunzel</span><span id="adv-hero-hp-text" class="adv-hp-text"></span></div>
+            <div class="adv-hp" aria-label="Rapunzel's health"><div id="adv-hero-hp" class="adv-hp-fill"></div></div>
+          </div>
+          <div class="adv-bar adv-bar-foe">
+            <div class="adv-name-row"><span id="adv-enemy-name" class="adv-name"></span><span id="adv-enemy-hp-text" class="adv-hp-text"></span></div>
+            <div class="adv-hp" aria-label="Enemy health"><div id="adv-enemy-hp" class="adv-hp-fill"></div></div>
+          </div>
+        </div>
+      </header>
+
+      <section class="adv-arena">
+        <div id="adv-bubble" class="adv-bubble" aria-live="polite"></div>
+        <div class="adv-fighters">
+          <div id="adv-hero" class="adv-fighter adv-hero">
+            <div id="adv-goat" class="goat adv-sprite" aria-hidden="true"></div>
+          </div>
+          <div id="adv-enemy-wrap" class="adv-fighter adv-foe">
+            <div id="adv-enemy" class="adv-sprite" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="word-bar adv-word-bar">
+        <span id="adv-word" class="current-word" aria-live="polite">&nbsp;</span>
+        <span id="adv-damage" class="current-points"></span>
+      </div>
+      <div class="adv-play">
+        <div id="adv-powers" class="adv-powers" aria-label="Power-ups"></div>
+        <div id="adv-board" class="adv-board" role="grid" aria-label="Letter board"></div>
+        <aside id="adv-info" class="adv-info" aria-label="About the enemy"></aside>
+      </div>
+      <div class="adv-controls">
+        <button id="adv-scramble" class="btn" type="button">Scramble</button>
+        <button id="adv-attack" class="btn btn-feed" type="button" disabled>Attack!</button>
+      </div>
+
+      <div id="adv-result" class="overlay" hidden>
+        <div class="card" role="dialog" aria-modal="true" aria-labelledby="adv-result-title">
+          <h2 id="adv-result-title"></h2>
+          <p id="adv-result-text"></p>
+          <div class="card-actions"><button id="adv-result-go" class="btn btn-feed" type="button"></button></div>
+        </div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

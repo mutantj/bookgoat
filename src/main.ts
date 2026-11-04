@@ -13,6 +13,7 @@ import boardResetUrl from '../audio/export/boardreset.wav';
 import tileSelectUrl from '../audio/export/tileselect.wav';
 import { loadEffect } from './ui/sound';
 import leaderboardIcon from '../art/leaderboard.svg?raw';
+import { FEATURES } from './features';
 
 declare const __APP_VERSION__: string; // from package.json, see vite.config.ts
 
@@ -514,7 +515,7 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') hideOverlay();
     return;
   }
-  if (e.metaKey || e.ctrlKey || e.altKey || locked() || !$('splash').hidden) return;
+  if (e.metaKey || e.ctrlKey || e.altKey || locked() || !$('splash').hidden || !$('adventure').hidden) return;
   if (e.key === 'Enter') {
     e.preventDefault();
     submit();
@@ -746,7 +747,7 @@ $('splash').addEventListener('click', (e) => {
   welcome.play().catch(() => {});
 });
 
-const homeButtons = () => [$<HTMLButtonElement>('btn-start'), $<HTMLButtonElement>('btn-blitz')];
+const homeButtons = () => [$<HTMLButtonElement>('btn-start'), $<HTMLButtonElement>('btn-blitz'), $<HTMLButtonElement>('btn-adventure')];
 
 // Let Rapunzel finish her greeting before showing the board, then run `then` once the home screen has gone.
 function startFromSplash(then?: () => void) {
@@ -795,6 +796,15 @@ for (const [button, m] of [['btn-start', classic], ['btn-blitz', blitz]] as cons
       dropTiles();
       mode.begin();
     });
+  });
+}
+
+$('btn-adventure').hidden = !FEATURES.adventure;
+// Loaded only when the feature is on, so a build without it carries none of its code.
+if (FEATURES.adventure) {
+  void import('./adventure/adventure').then(({ createAdventure }) => {
+    const adventure = createAdventure({ home: showHome, tileSelected: playTileSelect, boardDropped: playBoardReset });
+    $('btn-adventure').addEventListener('click', () => startFromSplash(() => adventure.open()));
   });
 }
 
