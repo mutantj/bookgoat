@@ -750,13 +750,15 @@ $('splash').addEventListener('click', (e) => {
 const homeButtons = () => [$<HTMLButtonElement>('btn-start'), $<HTMLButtonElement>('btn-blitz'), $<HTMLButtonElement>('btn-adventure')];
 
 // Let Rapunzel finish her greeting before showing the board, then run `then` once the home screen has gone.
-function startFromSplash(then?: () => void) {
+// `beforeFade` runs just as the home screen starts to fade, to put the next screen behind it.
+function startFromSplash(then?: () => void, beforeFade?: () => void) {
   const splash = $('splash');
   for (const b of homeButtons()) b.disabled = true;
   let left = false;
   const leave = () => {
     if (left) return;
     left = true;
+    beforeFade?.();
     splash.classList.add('leaving');
     window.setTimeout(() => {
       splash.hidden = true;
@@ -804,7 +806,7 @@ $('btn-adventure').hidden = !FEATURES.adventure;
 if (FEATURES.adventure) {
   void import('./adventure/adventure').then(({ createAdventure }) => {
     const adventure = createAdventure({ home: showHome, tileSelected: playTileSelect, boardDropped: playBoardReset });
-    $('btn-adventure').addEventListener('click', () => startFromSplash(() => adventure.open()));
+    $('btn-adventure').addEventListener('click', () => startFromSplash(undefined, () => adventure.open()));
   });
 }
 

@@ -472,7 +472,7 @@ export function createAdventure(host: AdventureHost) {
   });
 
   return {
-    /** Show the screen, starting at the tutorial. Call once the home screen has gone. */
+    /** Show the screen, starting at the tutorial. It sits under the home screen, so it can open as that fades. */
     open() {
       screen.hidden = false;
       $('adv-result').hidden = true;
