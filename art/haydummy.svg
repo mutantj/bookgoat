@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Adventure tutorial enemy: a straw training dummy on a post. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 116">
+  <ellipse cx="62" cy="111" rx="30" ry="4" fill="#000" opacity="0.25"/>
+  <rect x="58" y="70" width="8" height="42" rx="2" fill="#8a5a2b" stroke="#4e3115" stroke-width="2"/>
+  <rect x="22" y="52" width="80" height="8" rx="3" fill="#8a5a2b" stroke="#4e3115" stroke-width="2"/>
+  <path d="M22 56 l-10 -6 M22 56 l-12 2 M22 56 l-9 9 M102 56 l10 -6 M102 56 l12 2 M102 56 l9 9" stroke="#e7c25b" stroke-width="3" stroke-linecap="round"/>
+  <path d="M42 46 C42 40 82 40 82 46 L86 82 C86 88 38 88 38 82 Z" fill="#e7c25b" stroke="#a87f1f" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M46 56 l4 22 M56 52 l1 28 M68 52 l-1 28 M78 56 l-4 22" stroke="#c99a2e" stroke-width="2" stroke-linecap="round"/>
+  <path d="M40 80 l-4 8 M48 84 l-2 8 M62 85 l0 9 M76 84 l2 8 M84 80 l4 8" stroke="#e7c25b" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="62" cy="26" r="19" fill="#d9b98a" stroke="#8a6a3a" stroke-width="2.5"/>
+  <path d="M43 26 C43 10 81 10 81 26" fill="none" stroke="#8a6a3a" stroke-width="2" stroke-dasharray="3 3"/>
+  <path d="M50 22 l6 6 M56 22 l-6 6 M68 22 l6 6 M74 22 l-6 6" stroke="#4e3115" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M52 36 h20" stroke="#4e3115" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M55 33 v6 M61 33 v6 M67 33 v6" stroke="#4e3115" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M48 10 l-4 -7 M56 7 l-1 -7 M66 7 l1 -7 M76 10 l4 -7" stroke="#e7c25b" stroke-width="3" stroke-linecap="round"/>
+  <path d="M48 44 h28" stroke="#b8200b" stroke-width="4" stroke-linecap="round"/>
+</svg>

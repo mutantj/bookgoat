@@ -128,7 +128,7 @@
         </div>
         <div class="adv-health">
           <div id="adv-hero-bar" class="adv-bar adv-bar-hero">
-            <div class="adv-name-row"><span class="adv-name">Rapunzel</span><span id="adv-hero-hp-text" class="adv-hp-text"></span></div>
+            <div class="adv-name-row"><span class="adv-name">Rapunzel <span id="adv-hero-status" class="adv-hero-status"></span></span><span id="adv-hero-hp-text" class="adv-hp-text"></span></div>
             <div class="adv-hp" aria-label="Rapunzel's health"><div id="adv-hero-hp" class="adv-hp-fill"></div></div>
           </div>
           <div class="adv-bar adv-bar-foe">
@@ -139,6 +139,7 @@
       </header>
 
       <section class="adv-arena">
+        <button id="adv-skip" class="adv-skip" type="button" hidden>Skip tutorial</button>
         <div id="adv-bubble" class="adv-bubble" aria-live="polite"></div>
         <div class="adv-fighters">
           <div id="adv-hero" class="adv-fighter adv-hero">
@@ -150,9 +151,9 @@
         </div>
       </section>
 
-      <div class="word-bar adv-word-bar">
-        <span id="adv-word" class="current-word" aria-live="polite">&nbsp;</span>
-        <span id="adv-damage" class="current-points"></span>
+      <div id="adv-word-bar" class="adv-word-bar">
+        <div id="adv-word" class="adv-tray" aria-live="polite" aria-label="Your word"></div>
+        <span id="adv-damage" class="adv-damage"></span>
       </div>
       <div class="adv-play">
         <div id="adv-powers" class="adv-powers" aria-label="Power-ups"></div>

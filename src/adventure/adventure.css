@@ -2,8 +2,8 @@
 .adventure {
   /* Tile size: fill the width left between the power-ups and the enemy notes, but leave the battle at least ~170px on short screens. Uses the small
      viewport height (svh) so the board doesn't change size as mobile browser bars come and go. */
-  --s: max(40px, min(calc((min(100vw, 492px) - 216px) / 4), 72px, calc((100vh - 440px) / 4)));
-  --s: max(40px, min(calc((min(100vw, 492px) - 216px) / 4), 72px, calc((100svh - 440px) / 4)));
+  --s: max(40px, min(calc((min(100vw, 492px) - 216px) / 4), 72px, calc((100vh - 460px) / 4)));
+  --s: max(40px, min(calc((min(100vw, 492px) - 216px) / 4), 72px, calc((100svh - 460px) / 4)));
   position: fixed;
   inset: 0;
   z-index: 20;
@@ -230,8 +230,67 @@
 }
 
 /* ---------- Word bar, board, buttons ---------- */
-.adventure .adv-word-bar {
-  width: 100%;
+/* The word bar holds the picked tiles, with the damage under them. */
+.adv-word-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 10px 4px;
+  border-radius: var(--radius);
+  background: var(--ridge);
+  border: 1px solid var(--ridge-line);
+  transition: border-color 150ms ease;
+}
+.adv-word-bar.valid {
+  border-color: var(--marigold);
+}
+.adv-tray {
+  --s: 32px;
+  min-height: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+.adv-tray .tile {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+}
+.adv-tray .tile.new {
+  animation: adv-pop-in 140ms ease-out;
+}
+.adv-word-bar.valid .adv-tray .tile-face {
+  background: linear-gradient(160deg, #ffd977, var(--marigold));
+  box-shadow: inset 0 -3px 0 #c98a10, 0 1px 2px rgba(0, 0, 0, 0.35);
+  color: var(--marigold-ink);
+}
+.adv-word-bar.valid .adv-tray .tile.gem .tile-face {
+  box-shadow: inset 0 -3px 0 #c98a10, inset 0 0 0 2px var(--gem), 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+@keyframes adv-pop-in {
+  from { transform: translateY(8px) scale(0.8); opacity: 0; }
+}
+.adv-damage {
+  min-height: 16px;
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--mist);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A picked tile leaves an empty slot until the attack. */
+.adv-board .tile.taken .tile-face {
+  visibility: hidden;
+}
+.adv-board .tile.taken {
+  border-radius: calc(var(--s) * 0.18);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  cursor: default;
 }
 /* Power-ups | board | enemy notes */
 .adv-play {
@@ -355,4 +414,63 @@
 }
 .adv-controls .btn-feed {
   font-size: 1.05rem;
+}
+
+/* ---------- Tutorial and status ---------- */
+.adv-skip {
+  position: absolute !important;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(23, 50, 54, 0.75);
+  color: var(--mist);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.adv-skip[hidden] {
+  display: none;
+}
+.adv-arena:has(.adv-skip:not([hidden])) .adv-bubble {
+  margin-top: 18px;
+}
+/* The tutorial points at what to do next. */
+.adv-tile.hint .tile-face,
+.adv-power.hint,
+.btn.hint {
+  animation: adv-hint 1s ease-in-out infinite alternate;
+}
+@keyframes adv-hint {
+  from { box-shadow: 0 0 0 2px var(--marigold); }
+  to { box-shadow: 0 0 0 4px var(--marigold), 0 0 16px var(--marigold); }
+}
+.adv-power.active {
+  border-color: var(--marigold);
+  box-shadow: inset 0 0 0 2px var(--marigold);
+}
+.adv-hero-status {
+  font-size: 0.75rem;
+}
+.adv-pop.heal {
+  color: var(--gem-green);
+  text-shadow: 0 2px 0 #0c3a1f, 0 0 8px rgba(0, 0, 0, 0.5);
+  font-size: 1.2rem;
+  white-space: nowrap;
+}
+.adv-math {
+  font-size: 0.72rem;
+}
+.adv-damage b {
+  color: var(--marigold);
+}
+.adv-info-base,
+.adv-info-none {
+  color: var(--mist);
+  font-weight: 400;
+}
+.adv-info-none {
+  margin: 0;
 }
