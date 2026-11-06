@@ -23,6 +23,7 @@ export const TUNING = {
   /** Damage is rounded to a whole number, and a real word always does at least this much. */
   minDamage: 1,
 
+  /** `start` is how many the tutorial gives. The troll battles start with none and keep any earned along the way. */
   powerUps: {
     /** Heals Rapunzel. Using a power-up doesn't take a turn. */
     apple: { start: 2, heal: 8 },

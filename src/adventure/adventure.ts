@@ -42,6 +42,8 @@ export function createAdventure(host: AdventureHost) {
   let busy = false;
   let battle = 0;
   let heroHp: number = TUNING.hero.hp;
+  let startHp: number = TUNING.hero.hp; // health at the start of this battle, for a retry
+  let startPowers: Record<PowerId, number> = { apple: 0, hayBale: 0, braid: 0 }; // power-ups at the start of this battle, for a retry
   let enemyHp = 0;
   let enemyTurns = 0;
   let powers: Record<PowerId, number> = { apple: 0, hayBale: 0, braid: 0 };
@@ -400,13 +402,19 @@ export function createAdventure(host: AdventureHost) {
     const e = enemy();
     say(e.tutorial ? 'I think I got the hang of it!' : 'Ha! Too easy.');
     const last = battle === ENEMIES.length - 1;
+    // Health and power-ups carry from one troll to the next. Leaving the tutorial, she has full health and no power-ups.
+    const carry = !last && !e.tutorial ? { hp: heroHp, powers: { ...powers } } : undefined;
     window.setTimeout(
       () =>
         showResult(
           last ? 'Chapter cleared!' : e.tutorial ? 'Tutorial done!' : 'Victory!',
-          last ? `Rapunzel made it down ${STAGE}.` : e.tutorial ? 'Time for a real fight.' : `The ${e.name} runs off into the trees.`,
+          last
+            ? `Rapunzel made it down ${STAGE}.`
+            : e.tutorial
+              ? 'Time for a real fight. The practice power-ups stay here, so earn your own along the way.'
+              : `The ${e.name} runs off into the trees. Rapunzel goes on with ${heroHp}/${TUNING.hero.hp} health.`,
           last ? 'Play again' : 'Next battle',
-          () => startBattle(last ? 0 : battle + 1),
+          () => startBattle(last ? 0 : battle + 1, carry),
         ),
       700,
     );
@@ -415,17 +423,24 @@ export function createAdventure(host: AdventureHost) {
   function lose() {
     goat.setSad(true);
     say('Ow… I need a nap.');
-    window.setTimeout(() => showResult('Rapunzel needs a rest', `The ${enemy().name} wins this time.`, 'Try again', () => startBattle(battle)), 700);
+    window.setTimeout(() => showResult('Rapunzel needs a rest', `The ${enemy().name} wins this time.`, 'Try again', () => startBattle(battle, { hp: startHp, powers: startPowers })), 700);
   }
 
-  /** Every battle starts Rapunzel at full health with the starting power-ups. */
-  function startBattle(n: number) {
+  /**
+   * The tutorial gives the starting power-ups to practise with. A troll battle starts with what `carry` holds, the
+   * health and power-ups left after the last troll, or else full health and no power-ups. A retry passes what she had
+   * when the battle first began.
+   */
+  function startBattle(n: number, carry?: { hp: number; powers: Record<PowerId, number> }) {
     battle = n;
     const e = enemy();
-    heroHp = TUNING.hero.hp;
+    heroHp = startHp = carry?.hp ?? TUNING.hero.hp;
     enemyHp = e.hp;
     enemyTurns = 0;
-    powers = { apple: TUNING.powerUps.apple.start, hayBale: TUNING.powerUps.hayBale.start, braid: TUNING.powerUps.braid.start };
+    powers = e.tutorial
+      ? { apple: TUNING.powerUps.apple.start, hayBale: TUNING.powerUps.hayBale.start, braid: TUNING.powerUps.braid.start }
+      : { ...(carry?.powers ?? { apple: 0, hayBale: 0, braid: 0 }) };
+    startPowers = { ...powers };
     guarded = braided = false;
     busy = false;
     selection = [];
