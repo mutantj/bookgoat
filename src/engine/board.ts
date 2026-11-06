@@ -30,6 +30,18 @@ export function neighbors(p: Pos, cols: number = RULES.cols, rows: number = RULE
   return out.filter((q) => q.c >= 0 && q.c < cols && q.r >= 0 && q.r < rows);
 }
 
+/** Steps between two tiles on the staggered grid, moving only to touching tiles. */
+export function hexDistance(a: Pos, b: Pos): number {
+  // Odd columns sit lower, so convert to cube coordinates where each step changes two of x, y, z by one.
+  const cube = (p: Pos) => {
+    const z = p.r - (p.c - (p.c & 1)) / 2;
+    return { x: p.c, z, y: -p.c - z };
+  };
+  const p = cube(a);
+  const q = cube(b);
+  return Math.max(Math.abs(p.x - q.x), Math.abs(p.y - q.y), Math.abs(p.z - q.z));
+}
+
 export function isAdjacent(a: Pos, b: Pos): boolean {
   return neighbors(a).some((n) => samePos(n, b));
 }

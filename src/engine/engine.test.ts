@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isAdjacent, isValidPath, neighbors, type Board, type Tile } from './board';
+import { hexDistance, isAdjacent, isValidPath, neighbors, type Board, type Tile } from './board';
 import { Game, scoreTiles } from './game';
 import { dictionaryFromText } from './dictionary';
 import { findPath } from './pathfind';
@@ -36,6 +36,13 @@ describe('staggered grid adjacency', () => {
     for (let c = 0; c < RULES.cols; c++)
       for (let r = 0; r < RULES.rows; r++)
         for (const n of neighbors({ c, r })) expect(isAdjacent(n, { c, r })).toBe(true);
+  });
+  it('neighbours are exactly the tiles one step away', () => {
+    for (let c = 0; c < RULES.cols; c++)
+      for (let r = 0; r < RULES.rows; r++)
+        for (let c2 = 0; c2 < RULES.cols; c2++)
+          for (let r2 = 0; r2 < RULES.rows; r2++)
+            expect(hexDistance({ c, r }, { c: c2, r: r2 }) === 1).toBe(isAdjacent({ c, r }, { c: c2, r: r2 }));
   });
   it('interior tiles have six neighbours', () => {
     expect(neighbors({ c: 3, r: 4 })).toHaveLength(6);
@@ -199,5 +206,53 @@ describe('classic game', () => {
     const letters = g.board.flat().map((t) => t.letter);
     const vowels = letters.filter((l) => 'AEIOU'.includes(l)).length;
     expect(vowels / letters.length).toBeGreaterThan(0.2);
+  });
+
+  describe('gem blasts', () => {
+    const blitzy = { gemBlastRadius: { green: 1, gold: 1, sapphire: 2, diamond: 2, crystal: 3 } };
+    const CAT = [{ c: 0, r: 0 }, { c: 0, r: 1 }, { c: 0, r: 2 }];
+
+    it('a gem in the word takes the tiles around it and scores them', () => {
+      const g = new Game(dict, ['banana'], 42, blitzy);
+      g.state.board = boardFrom(['CATXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX']);
+      g.board[0][1].kind = 'green';
+      const blast = [g.board[1][0], g.board[1][1]]; // A at (0,1) touches (1,0), (1,1) and its own column, which is the word
+      const points = scoreTiles([g.board[0][0], g.board[0][1], g.board[0][2]]);
+      const res = g.submit(CAT);
+      expect(res.ok && res.blastedTileIds.sort()).toEqual(blast.map((t) => t.id).sort());
+      expect(res.ok && res.blastPoints).toBe(2 * RULES.letterValues.X * RULES.pointScale);
+      expect(g.state.score).toBe(points + 2 * RULES.letterValues.X * RULES.pointScale);
+      for (const col of g.board) expect(col).toHaveLength(8);
+    });
+
+    it('preview includes the blast', () => {
+      const g = new Game(dict, ['banana'], 42, blitzy);
+      g.state.board = boardFrom(['CATXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX']);
+      g.board[0][1].kind = 'green';
+      const pv = g.preview(CAT);
+      const res = g.submit(CAT);
+      expect(res.ok && res.points + res.blastPoints).toBe(pv.points);
+    });
+
+    it('gems caught in a blast explode too, and blasts put out fires', () => {
+      const g = new Game(dict, ['banana'], 42, blitzy);
+      g.state.board = boardFrom(['CATXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX']);
+      g.board[0][1].kind = 'green';
+      g.board[1][1].kind = 'gold'; // caught by the green, reaches column 2
+      g.board[2][1].kind = 'burning';
+      const fireId = g.board[2][1].id;
+      const res = g.submit(CAT);
+      expect(res.ok && res.blastedTileIds).toContain(fireId);
+      expect(res.ok && res.blastedTileIds.length).toBeGreaterThan(2);
+      expect(g.board.flat().some((t) => t.id === fireId)).toBe(false);
+    });
+
+    it('Classic gems do not explode', () => {
+      const g = make();
+      g.state.board = boardFrom(['CATXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX']);
+      g.board[0][1].kind = 'green';
+      const res = g.submit(CAT);
+      expect(res.ok && res.blastedTileIds).toEqual([]);
+    });
   });
 });

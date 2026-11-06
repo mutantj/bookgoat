@@ -1,4 +1,5 @@
 import {
+  hexDistance,
   isValidPath,
   newBoard,
   removeAndRefill,
@@ -41,6 +42,9 @@ export interface TurnResult {
   levelUp: boolean;
   newTileIds: number[];
   burnedTileIds: number[]; // tiles destroyed by fire this turn
+  /** Tiles destroyed by gems in the word exploding (Blitz), and the points they added. */
+  blastedTileIds: number[];
+  blastPoints: number;
   spawnedBurning: number[];
   gameOver: boolean;
 }
@@ -64,6 +68,8 @@ export interface GameOptions {
   gemLengthBonus?: number;
   /** Only words this long or shorter can start a fire. */
   maxBurnLength?: number;
+  /** Gems used in a word explode, destroying tiles this many steps away. Gems caught in a blast explode too. */
+  gemBlastRadius?: Record<GemKind, number>;
 }
 
 export class Game {
@@ -128,7 +134,8 @@ export class Game {
     const tiles = path.map((p) => this.board[p.c][p.r]);
     const length = tiles.reduce((n, t) => n + tileLength(t), 0);
     const valid = length >= RULES.minWordLength && isValidPath(path) && this.dict.has(word);
-    return { word, length, points: scoreTiles(tiles), valid };
+    const blast = this.blastFrom(path);
+    return { word, length, points: scoreTiles(tiles) + blastScore(blast.map((p) => this.board[p.c][p.r])), valid };
   }
 
   submit(path: Pos[]): TurnResult | Rejection {
@@ -142,27 +149,28 @@ export class Game {
 
     const s = this.state;
     const points = scoreTiles(tiles);
+    const usedIds = new Set(tiles.map((t) => t.id));
+    // Work out the blast before fire moves anything; fire never burns a tile the blast is taking.
+    const blasted = this.blastFrom(path).map((p) => this.board[p.c][p.r]);
+    const blastedIds = new Set(blasted.map((t) => t.id));
+    const blastPoints = blastScore(blasted);
     const bonusHit = !s.bonusFound && word === s.bonusWord;
     const bonusPoints = bonusHit ? RULES.bonusWordPoints(s.level) : 0;
     if (bonusHit) s.bonusFound = true;
 
-    s.score += points + bonusPoints;
-    s.levelPoints += points + bonusPoints;
+    s.score += points + bonusPoints + blastPoints;
+    s.levelPoints += points + bonusPoints + blastPoints;
     s.wordsPlayed++;
-    s.history.unshift({ word, points: points + bonusPoints });
+    s.history.unshift({ word, points: points + bonusPoints + blastPoints });
     s.history.length = Math.min(s.history.length, 12);
     if (word.length > s.longestWord.length) s.longestWord = word;
     if (!s.bestWord || points > s.bestWord.points) s.bestWord = { word, points };
 
-    // Fire burns down first (only tiles that existed before this word), then the word is eaten.
-    const burnedTileIds: number[] = [];
-    let gameOver = false;
-    const usedIds = new Set(tiles.map((t) => t.id));
-    const burnResult = this.burnStep(usedIds);
-    burnedTileIds.push(...burnResult.burned);
-    gameOver = burnResult.gameOver;
+    // Fire burns down first (only tiles that existed before this word), then the word is eaten and any blast goes off.
+    const gone = new Set([...usedIds, ...blastedIds]);
+    const { burned: burnedTileIds, gameOver } = this.burnStep(gone);
 
-    const created = removeAndRefill(this.board, this.positionsOf(usedIds), this.factory);
+    const created = removeAndRefill(this.board, this.positionsOf(gone), this.factory);
 
     // Long words leave a gem behind; short words risk a new fire.
     let gemEarned = RULES.gemForLength(length + (this.options.gemLengthBonus ?? 0));
@@ -193,9 +201,32 @@ export class Game {
       levelUp,
       newTileIds: created.map((t) => t.id),
       burnedTileIds,
+      blastedTileIds: [...blastedIds],
+      blastPoints,
       spawnedBurning,
       gameOver,
     };
+  }
+
+  /** Tiles destroyed when the gems in `path` explode, not counting the word's own tiles. Empty unless the mode has blasts. */
+  private blastFrom(path: Pos[]): Pos[] {
+    const radius = this.options.gemBlastRadius;
+    if (!radius) return [];
+    const inWord = (p: Pos) => path.some((q) => q.c === p.c && q.r === p.r);
+    const all: Pos[] = [];
+    this.board.forEach((col, c) => col.forEach((_, r) => all.push({ c, r })));
+    const caught: Pos[] = [];
+    const queue = path.filter((p) => this.board[p.c][p.r].kind in radius);
+    while (queue.length) {
+      const gem = queue.shift()!;
+      const reach = radius[this.board[gem.c][gem.r].kind as GemKind];
+      for (const p of all) {
+        if (inWord(p) || caught.some((q) => q.c === p.c && q.r === p.r) || hexDistance(gem, p) > reach) continue;
+        caught.push(p);
+        if (this.board[p.c][p.r].kind in radius) queue.push(p); // chain reaction
+      }
+    }
+    return caught;
   }
 
   /** Reshuffle every letter. Costs a turn and starts a fire. */
@@ -276,6 +307,11 @@ export class Game {
     t.fresh = true;
     return [t.id];
   }
+}
+
+/** Each tile caught in a blast is worth its letter value. */
+export function blastScore(tiles: Tile[]): number {
+  return Math.round(tiles.reduce((sum, t) => sum + (RULES.letterValues[t.letter] ?? 1), 0) * RULES.pointScale);
 }
 
 /** Letter values × length bonus × gem multipliers. */

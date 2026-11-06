@@ -446,6 +446,31 @@ body {
   transition: opacity 450ms ease 150ms;
 }
 
+/* Tiles caught when a gem explodes (Blitz) flash, swell and vanish, and the board jolts. */
+.tile.blasted {
+  z-index: 3;
+  animation: blast 420ms ease-out forwards;
+}
+@keyframes blast {
+  0% { filter: brightness(1); opacity: 1; scale: 1; }
+  25% { filter: brightness(2.2) saturate(0.4); opacity: 1; scale: 1.15; }
+  100% { filter: brightness(2.5) saturate(0); opacity: 0; scale: 1.6; }
+}
+.board.boom {
+  animation: boom 320ms ease-out;
+}
+@keyframes boom {
+  0%, 100% { translate: 0 0; }
+  20% { translate: -4px 3px; }
+  40% { translate: 4px -3px; }
+  60% { translate: -3px -2px; }
+  80% { translate: 2px 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile.blasted { animation-duration: 1ms; }
+  .board.boom { animation: none; }
+}
+
 /* Eaten tiles fly above everything else so the board's edge doesn't clip them. */
 .fly-layer {
   position: fixed;

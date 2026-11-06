@@ -215,6 +215,7 @@ function sayForTurn(res: TurnResult) {
   const w = `<b>${res.word.toUpperCase()}</b>`;
   if (res.gameOver) return say('The fire reached the bottom. My library is toast!');
   if (res.bonusHit) return say(`${w}! That's the bonus word. Delicious.`);
+  if (res.blastedTileIds.length) return say(`BOOM! The gem in ${w} blew up ${res.blastedTileIds.length} tiles for +${res.blastPoints}.`);
   if (res.gemEarned) return say(`${w} was so long it left a ${res.gemEarned} gem behind.`);
   if (res.spawnedBurning.length) return say(`${w}… short words make sparks. Watch that fire!`);
   if (game.danger() >= 0.75) return say(`Use the burning tile before it hits the bottom!`);
@@ -224,7 +225,7 @@ function sayForTurn(res: TurnResult) {
 
 /* ---------------- Turns ---------------- */
 
-function animateOut(ids: number[], cls: 'eaten' | 'burnt') {
+function animateOut(ids: number[], cls: 'eaten' | 'burnt' | 'blasted') {
   for (const id of ids) {
     const el = tileEls.get(id);
     if (!el) continue;
@@ -350,6 +351,12 @@ function submit() {
     sayForTurn(res);
   });
   animateOut(res.burnedTileIds, 'burnt');
+  animateOut(res.blastedTileIds, 'blasted');
+  if (res.blastedTileIds.length) {
+    boardEl.classList.remove('boom');
+    void boardEl.offsetWidth;
+    boardEl.classList.add('boom');
+  }
   render(false, res.newTileIds);
   mode.save(game);
   const extra = mode.afterTurn(res);

@@ -8,6 +8,8 @@ export const BLITZ = {
   gemLengthBonus: 2,
   /** Only words this short can start a fire, so a gem word never brings one. */
   maxBurnLength: 3,
+  /** Gems used in a word explode, taking every tile this many steps away with them (1 = the six touching tiles). */
+  gemBlastRadius: { green: 1, gold: 1, sapphire: 2, diamond: 2, crystal: 3 },
 };
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -42,7 +44,7 @@ export function createBlitz(host: ModeHost): GameMode {
     const box = $('countdown');
     box.innerHTML = '';
     box.hidden = false;
-    return freshGame({ gemLengthBonus: BLITZ.gemLengthBonus, maxBurnLength: BLITZ.maxBurnLength });
+    return freshGame({ gemLengthBonus: BLITZ.gemLengthBonus, maxBurnLength: BLITZ.maxBurnLength, gemBlastRadius: BLITZ.gemBlastRadius });
   }
 
   /** 3-2-1, then one minute on the clock. */
@@ -88,7 +90,7 @@ export function createBlitz(host: ModeHost): GameMode {
     name: 'Blitz',
     scoresLabel: 'Blitz rounds',
     bestTitle: 'New best Blitz round!',
-    help: `<b>Blitz</b> is the same game against a one-minute clock. Score as much as you can before time runs out. Reaching a level adds ${BLITZ.levelUpSeconds} seconds for each level number (level 3 adds ${3 * BLITZ.levelUpSeconds}), and gems come ${BLITZ.gemLengthBonus} letter${BLITZ.gemLengthBonus === 1 ? '' : 's'} sooner. Only ${BLITZ.maxBurnLength}-letter words can start a fire.`,
+    help: `<b>Blitz</b> is the same game against a one-minute clock. Score as much as you can before time runs out. Reaching a level adds ${BLITZ.levelUpSeconds} seconds for each level number (level 3 adds ${3 * BLITZ.levelUpSeconds}), and gems come ${BLITZ.gemLengthBonus} letter${BLITZ.gemLengthBonus === 1 ? '' : 's'} sooner. Only ${BLITZ.maxBurnLength}-letter words can start a fire. Gems explode when you use them, scoring every tile in the blast; sapphires and better blow up a bigger area.`,
 
     enter: setup,
     restart: setup,
