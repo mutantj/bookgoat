@@ -5,7 +5,7 @@ export interface Tile {
   id: number;
   letter: string; // 'A'..'Z' or 'Qu'
   kind: TileKind;
-  /** Burning tiles don't burn on the turn they appear. */
+  /** Adventure marks the scripted refill tile that becomes a gem. */
   fresh?: boolean;
 }
 

@@ -167,6 +167,16 @@ describe('classic game', () => {
     expect(r2.ok && r2.gameOver).toBe(true);
   });
 
+  it('a new fire burns on the very next turn', () => {
+    const g = make();
+    g.state.board = boardFrom(['CATXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX']);
+    const fire = g.board[3][0];
+    fire.kind = 'burning'; // as if the last word or a scramble had just started it
+    const res = g.submit([{ c: 0, r: 0 }, { c: 0, r: 1 }, { c: 0, r: 2 }]);
+    expect(res.ok && res.burnedTileIds).toHaveLength(1);
+    expect(g.board[3][1].id).toBe(fire.id);
+  });
+
   it('using a burning tile puts the fire out', () => {
     const g = make();
     g.state.board = boardFrom(['CA*TXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX', 'XXXXXXXX']);

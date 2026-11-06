@@ -240,7 +240,6 @@ export class Game {
       if (!top.length) break;
       const t = this.rng.pick(top);
       t.kind = 'burning';
-      t.fresh = true;
       spawned.push(t.id);
     }
     this.state.gameOver = gameOver;
@@ -262,7 +261,8 @@ export class Game {
   }
 
   /**
-   * Each burning tile (not used this turn, not brand new) burns the tile beneath it and drops a row.
+   * Each burning tile not used this turn burns the tile beneath it and drops a row, starting with the next turn
+   * after it appears.
    * A fire already on the bottom row with nothing left to burn ends the game.
    */
   private burnStep(usedIds: Set<number>): { burned: number[]; gameOver: boolean } {
@@ -274,10 +274,6 @@ export class Game {
       for (let r = col.length - 1; r >= 0; r--) {
         const t = col[r];
         if (t.kind !== 'burning' || usedIds.has(t.id)) continue;
-        if (t.fresh) {
-          t.fresh = false;
-          continue;
-        }
         if (r === col.length - 1) {
           gameOver = true;
           continue;
@@ -304,7 +300,6 @@ export class Game {
     if (!candidates.length) return [];
     const t = this.rng.pick(candidates);
     t.kind = 'burning';
-    t.fresh = true;
     return [t.id];
   }
 }
