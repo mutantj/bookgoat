@@ -10,8 +10,8 @@ function leadingSilence(buf: AudioBuffer): number {
   return first < 0 ? 0 : Math.max(0, first / buf.sampleRate - 0.005);
 }
 
-/** Load a sound now; returns a function that plays it. */
-export function loadEffect(url: string): () => void {
+/** Load a sound now; returns a function that plays it, optionally shifted up or down by `semitones`. */
+export function loadEffect(url: string): (semitones?: number) => void {
   try {
     ctx ??= new AudioContext(); // starts suspended until the first tap; resumed in play()
   } catch {
@@ -29,11 +29,12 @@ export function loadEffect(url: string): () => void {
     })
     .catch(() => {}); // sound is a nice-to-have; the game plays fine without it
 
-  return () => {
+  return (semitones = 0) => {
     if (audio.state === 'suspended') void audio.resume();
     if (!buffer) return;
     const src = audio.createBufferSource();
     src.buffer = buffer;
+    src.playbackRate.value = 2 ** (semitones / 12); // also plays a little faster, like a tape sped up
     src.connect(audio.destination);
     src.start(0, offset);
   };

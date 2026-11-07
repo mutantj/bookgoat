@@ -148,11 +148,12 @@ function render(instant = false, newIds: number[] = []) {
 }
 
 const playWordPower = loadEffect(wordPowerUrl);
+const WORD_PITCH = { semitonesPerLetter: 1, maxSemitones: 9 }; // each letter past 3 raises it a semitone, up to 12 letters
 let soundedWord = ''; // the valid word last announced, so redraws don't replay the sound
 
-/** Play the word-power sound when the selection turns into a valid word (a different one from last time). */
+/** Play the word-power sound when the selection turns into a valid word (a different one from last time), higher for longer words. */
 function soundWord(valid: string) {
-  if (valid && valid !== soundedWord) playWordPower();
+  if (valid && valid !== soundedWord) playWordPower(Math.min((valid.length - 3) * WORD_PITCH.semitonesPerLetter, WORD_PITCH.maxSemitones));
   soundedWord = valid;
 }
 
