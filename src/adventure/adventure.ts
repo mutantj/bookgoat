@@ -4,6 +4,7 @@
 import './adventure.css';
 import { TileFactory, type Pos, type Tile } from '../engine/board';
 import { Rng } from '../engine/rng';
+import type { GemKind } from '../engine/rules';
 import { dict } from '../modes/mode';
 import { Goat } from '../ui/goat';
 import { ENEMIES, STAGE, type Enemy } from './enemies';
@@ -28,6 +29,7 @@ export interface AdventureHost {
   tileSelected(): void;
   /** Called with the word whenever the tray is redrawn, or '' when it isn't a valid word. */
   wordFormed(word: string): void;
+  gemSpawned(kind: GemKind): void;
   boardDropped(): void;
 }
 
@@ -328,7 +330,10 @@ export function createAdventure(host: AdventureHost) {
     // The used tiles are gone for good: the columns fall and new letters drop in on top.
     const created = refill(board, used, makeTile);
     const gem = gemForLength(w.length);
-    if (gem && created.length) (created.find((t) => t.fresh) ?? rng.pick(created)).kind = gem;
+    if (gem && created.length) {
+      (created.find((t) => t.fresh) ?? rng.pick(created)).kind = gem;
+      host.gemSpawned(gem);
+    }
     for (const t of created) delete t.fresh;
     if (w.length >= TUNING.braidForLength && powers.braid < TUNING.maxPowerUps) {
       powers.braid++;

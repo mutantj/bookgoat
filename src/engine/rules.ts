@@ -2,6 +2,8 @@
 // without touching engine code. Values are best guesses — see parity pass (plan step 9).
 
 export type GemKind = 'green' | 'gold' | 'sapphire' | 'diamond' | 'crystal';
+/** Every gem, from least to most valuable. */
+export const GEM_KINDS: GemKind[] = ['green', 'gold', 'sapphire', 'diamond', 'crystal'];
 export type TileKind = 'normal' | 'burning' | GemKind;
 
 export const RULES = {

@@ -1,7 +1,7 @@
 import './style.css';
 import type { Game, TurnResult } from './engine/game';
 import { isAdjacent, samePos, type Pos, type Tile } from './engine/board';
-import { RULES } from './engine/rules';
+import { GEM_KINDS, RULES, type GemKind } from './engine/rules';
 import { Goat } from './ui/goat';
 import { addScore, loadGame, loadInitials, loadScores, saveInitials } from './ui/storage';
 import { fetchTop, flushPending, leaderboardEnabled, pendingCount, postScore, qualifies, type OnlineScore } from './ui/leaderboard';
@@ -12,6 +12,7 @@ import welcomeUrl from '../audio/export/welcometobookgoat.wav';
 import boardResetUrl from '../audio/export/boardreset.wav';
 import tileSelectUrl from '../audio/export/tileselect.wav';
 import wordPowerUrl from '../audio/export/word_power.wav';
+import gemSpawnUrl from '../audio/export/gemspawn.wav';
 import { loadEffect } from './ui/sound';
 import leaderboardIcon from '../art/leaderboard.svg?raw';
 import { FEATURES } from './features';
@@ -155,6 +156,12 @@ let soundedWord = ''; // the valid word last announced, so redraws don't replay 
 function soundWord(valid: string) {
   if (valid && valid !== soundedWord) playWordPower(Math.min((valid.length - 3) * WORD_PITCH.semitonesPerLetter, WORD_PITCH.maxSemitones));
   soundedWord = valid;
+}
+
+const playGemSpawnSound = loadEffect(gemSpawnUrl);
+/** A new gem tile appeared: green plays the sound as recorded, and each better gem a semitone higher. */
+function playGemSpawn(kind: GemKind) {
+  playGemSpawnSound(GEM_KINDS.indexOf(kind));
 }
 
 function renderSelection() {
@@ -365,6 +372,7 @@ function submit() {
   });
   animateOut(res.burnedTileIds, 'burnt');
   animateOut(res.blastedTileIds, 'blasted');
+  if (res.gemEarned) playGemSpawn(res.gemEarned);
   if (res.blastedTileIds.length) {
     boardEl.classList.remove('boom');
     void boardEl.offsetWidth;
@@ -825,7 +833,7 @@ $('btn-adventure').hidden = !FEATURES.adventure;
 // Loaded only when the feature is on, so a build without it carries none of its code.
 if (FEATURES.adventure) {
   void import('./adventure/adventure').then(({ createAdventure }) => {
-    const adventure = createAdventure({ home: showHome, tileSelected: playTileSelect, wordFormed: soundWord, boardDropped: playBoardReset });
+    const adventure = createAdventure({ home: showHome, tileSelected: playTileSelect, wordFormed: soundWord, gemSpawned: playGemSpawn, boardDropped: playBoardReset });
     $('btn-adventure').addEventListener('click', () => startFromSplash(undefined, () => adventure.open()));
   });
 }
