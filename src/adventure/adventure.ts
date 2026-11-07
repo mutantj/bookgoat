@@ -26,6 +26,8 @@ export interface AdventureHost {
   /** Back to the home screen. */
   home(): void;
   tileSelected(): void;
+  /** Called with the word whenever the tray is redrawn, or '' when it isn't a valid word. */
+  wordFormed(word: string): void;
   boardDropped(): void;
 }
 
@@ -149,6 +151,7 @@ export function createAdventure(host: AdventureHost) {
       b.addEventListener('click', () => unpick(i));
       tray.appendChild(b);
     });
+    host.wordFormed(isWord() ? w : '');
     const bar = $('adv-word-bar');
     bar.classList.toggle('valid', isWord());
     bar.classList.toggle('invalid', !!w && !isWord());

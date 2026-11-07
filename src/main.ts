@@ -11,6 +11,7 @@ import { createBlitz } from './modes/blitz';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
 import boardResetUrl from '../audio/export/boardreset.wav';
 import tileSelectUrl from '../audio/export/tileselect.wav';
+import wordPowerUrl from '../audio/export/word_power.wav';
 import { loadEffect } from './ui/sound';
 import leaderboardIcon from '../art/leaderboard.svg?raw';
 import { FEATURES } from './features';
@@ -146,6 +147,15 @@ function render(instant = false, newIds: number[] = []) {
   renderHud();
 }
 
+const playWordPower = loadEffect(wordPowerUrl);
+let soundedWord = ''; // the valid word last announced, so redraws don't replay the sound
+
+/** Play the word-power sound when the selection turns into a valid word (a different one from last time). */
+function soundWord(valid: string) {
+  if (valid && valid !== soundedWord) playWordPower();
+  soundedWord = valid;
+}
+
 function renderSelection() {
   const ids = new Set(selection.map((p) => game.board[p.c][p.r].id));
   const lastId = selection.length ? game.board[selection.at(-1)!.c][selection.at(-1)!.r].id : -1;
@@ -165,6 +175,7 @@ function renderSelection() {
   const feed = $<HTMLButtonElement>('btn-feed');
   wordEl.className = 'current-word';
   if (!selection.length) {
+    soundWord('');
     wordEl.innerHTML = '&nbsp;';
     ptsEl.textContent = '';
     feed.disabled = true;
@@ -172,6 +183,7 @@ function renderSelection() {
     return;
   }
   const pv = game.preview(selection);
+  soundWord(pv.valid ? pv.word : '');
   wordEl.textContent = pv.word;
   wordEl.classList.add(pv.valid ? 'valid' : 'invalid');
   ptsEl.textContent = pv.valid ? `${pv.points} pts` : pv.length < RULES.minWordLength ? '' : 'not a word';
@@ -812,7 +824,7 @@ $('btn-adventure').hidden = !FEATURES.adventure;
 // Loaded only when the feature is on, so a build without it carries none of its code.
 if (FEATURES.adventure) {
   void import('./adventure/adventure').then(({ createAdventure }) => {
-    const adventure = createAdventure({ home: showHome, tileSelected: playTileSelect, boardDropped: playBoardReset });
+    const adventure = createAdventure({ home: showHome, tileSelected: playTileSelect, wordFormed: soundWord, boardDropped: playBoardReset });
     $('btn-adventure').addEventListener('click', () => startFromSplash(undefined, () => adventure.open()));
   });
 }
