@@ -894,6 +894,35 @@ body {
   font-weight: 700;
   color: #b06f00;
 }
+.card .scores li.entry {
+  margin: 2px 0;
+}
+/* The player's new score on the board: initials box, score, Post. */
+.entry-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.entry-form span {
+  flex: 1;
+  min-width: 0;
+}
+.entry-form input {
+  width: 4.6ch;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.12em;
+  text-align: center;
+  padding: 2px 4px;
+  border: 2px solid var(--marigold);
+  border-radius: var(--radius);
+  background: #fff;
+  color: #22343a;
+}
+.entry-form input:focus {
+  outline: 3px solid var(--marigold);
+  outline-offset: 1px;
+}
 .lb-note {
   color: #5b6b68;
   font-size: 0.9rem;

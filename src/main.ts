@@ -4,7 +4,7 @@ import { isAdjacent, samePos, type Pos, type Tile } from './engine/board';
 import { GEM_KINDS, RULES, type GemKind } from './engine/rules';
 import { Goat } from './ui/goat';
 import { addScore, loadGame, loadInitials, loadScores, saveInitials } from './ui/storage';
-import { fetchTop, flushPending, leaderboardEnabled, pendingCount, postScore, qualifies, type OnlineScore } from './ui/leaderboard';
+import { TOP, fetchTop, flushPending, leaderboardEnabled, pendingCount, postScore, qualifies, type OnlineScore } from './ui/leaderboard';
 import type { EndReason, GameMode, ModeHost, ModeId } from './modes/mode';
 import { createClassic } from './modes/classic';
 import { createBlitz } from './modes/blitz';
@@ -600,27 +600,37 @@ function showGameOver(reason: EndReason) {
     `<div class="final-score">${s.score.toLocaleString()}</div>
      <p>${mode.summary(game, reason)}${
        s.bestWord ? ` Best word: <b>${s.bestWord.word.toUpperCase()}</b> for ${s.bestWord.points}.` : ''
-     }</p><div id="online-entry"></div>${scoresHtml(mode, rank)}`,
+     }</p><div id="online-entry">${leaderboardEnabled ? '<p class="lb-note">Loading the leaderboard…</p>' : scoresHtml(mode, rank)}</div>`,
     [
       { label: 'Home', run: showHome },
       { label: 'Play again', primary: true, run: newGame },
     ],
   );
-  void offerOnline(mode, s.score, s.level, s.bestWord?.word ?? '');
+  if (leaderboardEnabled) void showOnlineResult(mode, { score: s.score, level: s.level, bestWord: s.bestWord?.word ?? '' }, rank);
 }
 
 /* ---------------- Online leaderboard ---------------- */
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-function onlineHtml(top: OnlineScore[], highlight = -1) {
-  if (!top.length) return '<p>No scores yet. Be the first!</p>';
-  return `<ol class="scores">${top
-    .map(
-      (s, i) =>
-        `<li${i === highlight ? ' class="mine"' : ''}><b>${esc(s.initials)}</b> · ${s.score.toLocaleString()} · level ${s.level}${s.bestWord ? ` · ${esc(s.bestWord.toUpperCase())}` : ''}</li>`,
-    )
-    .join('')}</ol>`;
+const scoreLine = (s: { score: number; level: number; bestWord: string }) =>
+  `${s.score.toLocaleString()} · level ${s.level}${s.bestWord ? ` · ${esc(s.bestWord.toUpperCase())}` : ''}`;
+
+const initialsInput = () =>
+  `<input id="initials" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AAA" aria-label="Your initials" value="${esc(loadInitials())}" />`;
+
+/** The top 10, with `highlight` in bold. With `entry`, the player's new score is slotted in at `entry.at` with a box for initials. */
+function onlineHtml(top: OnlineScore[], highlight = -1, entry?: { at: number; score: GameResult }) {
+  const rows = top.map((s, i) => `<li${i === highlight ? ' class="mine"' : ''}><b>${esc(s.initials)}</b> · ${scoreLine(s)}</li>`);
+  if (entry) {
+    rows.splice(
+      entry.at,
+      0,
+      `<li class="mine entry"><form id="entry-form" class="entry-form">${initialsInput()}<span>${scoreLine(entry.score)}</span></form></li>`,
+    );
+  }
+  if (!rows.length) return '<p>No scores yet. Be the first!</p>';
+  return `<ol class="scores">${rows.slice(0, TOP).join('')}</ol>`;
 }
 
 function waitingHtml(board: ModeId) {
@@ -639,24 +649,67 @@ async function showLeaderboard(m: GameMode) {
     : `<p>You're offline. The leaderboard needs a connection.</p>${waitingHtml(m.id)}`;
 }
 
-/** At game over, ask for initials if the score would make the online top 10. Offline, it's saved to post later. */
-async function offerOnline(m: GameMode, score: number, level: number, bestWord: string) {
+type GameResult = { score: number; level: number; bestWord: string };
+
+const boardLabel = (m: GameMode) => `<p class="label" style="color:#5b6b68">${m.name} leaderboard</p>`;
+
+/**
+ * Game over with the leaderboard on: show the online top 10 straight away. A score that makes it is slotted in
+ * at its place, highlighted, with a box for initials and a Post button. Offline, it falls back to an initials
+ * box (the score posts later) and this device's best scores.
+ */
+async function showOnlineResult(m: GameMode, result: GameResult, localRank: number) {
   const gen = overlayGen;
-  if (!(await qualifies(m.id, score))) return void flushPending();
+  const top = await fetchTop(m.id);
   if (gen !== overlayGen) return;
   const box = $('online-entry');
-  box.innerHTML = `<form class="initials-form">
-      <label for="initials">You made the ${m.name} leaderboard! Your initials:</label>
-      <div class="initials-row">
-        <input id="initials" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(loadInitials())}" />
-        <button class="btn btn-feed" type="submit">Post</button>
-      </div>
-      <p class="lb-note" aria-live="polite"></p>
-    </form>`;
+  if (!top) {
+    const ok = await qualifies(m.id, result.score); // offline, this uses the last board seen
+    if (gen !== overlayGen) return;
+    box.innerHTML = `<p class="lb-note">You're offline, so the leaderboard can't load.</p>${
+      ok
+        ? `<form id="entry-form" class="initials-form">
+             <label for="initials">This score would make the ${m.name} leaderboard! Your initials:</label>
+             <div class="initials-row">${initialsInput()}</div>
+           </form>`
+        : ''
+    }<p class="lb-note entry-note" aria-live="polite"></p>${scoresHtml(m, localRank)}`;
+    if (ok) wireEntry(m, result);
+    return;
+  }
+  // Equal scores list oldest first, so a new score goes after any it ties with.
+  const at = result.score > 0 ? top.filter((t) => t.score >= result.score).length : TOP;
+  if (at >= TOP) {
+    box.innerHTML = `${boardLabel(m)}${onlineHtml(top)}<p class="lb-note">The top ${TOP} starts at ${(top[TOP - 1].score + 1).toLocaleString()}.</p>`;
+    return void flushPending();
+  }
+  box.innerHTML = `${boardLabel(m)}${onlineHtml(top, -1, { at, score: result })}<p class="lb-note entry-note" aria-live="polite">You made number ${at + 1}! Enter your initials and post.</p>`;
+  wireEntry(m, result);
+}
+
+/**
+ * Hook up the initials box inside #online-entry. Its Post button sits with Home and Play again at the bottom of
+ * the card, and takes over as the main button until the score is posted.
+ */
+function wireEntry(m: GameMode, result: GameResult) {
+  const gen = overlayGen;
+  const box = $('online-entry');
   const form = box.querySelector('form')!;
   const input = form.querySelector('input')!;
-  const button = form.querySelector('button')!;
-  const note = form.querySelector('.lb-note')!;
+  const note = box.querySelector('.entry-note')!;
+  const actions = $('overlay-actions');
+  const playAgain = actions.querySelector('.btn-feed');
+  playAgain?.classList.replace('btn-feed', 'btn-quiet');
+  const button = document.createElement('button');
+  button.type = 'submit';
+  button.className = 'btn btn-feed';
+  button.textContent = 'Post';
+  button.setAttribute('form', form.id); // submits the form from outside it
+  actions.appendChild(button);
+  const done = () => {
+    button.remove();
+    playAgain?.classList.replace('btn-quiet', 'btn-feed');
+  };
   // Post stays disabled until there are exactly three letters.
   const ready = () => (button.disabled = !/^[A-Z]{3}$/.test(input.value));
   input.addEventListener('input', () => {
@@ -672,14 +725,12 @@ async function offerOnline(m: GameMode, score: number, level: number, bestWord: 
     button.disabled = true;
     note.textContent = 'Posting…';
     saveInitials(initials);
-    const res = await postScore({ board: m.id, initials, score, level, bestWord, version: __APP_VERSION__, playedAt: new Date().toISOString() });
+    const res = await postScore({ board: m.id, initials, ...result, version: __APP_VERSION__, playedAt: new Date().toISOString() });
     if (gen !== overlayGen) return;
+    if (res.status !== 'rejected') done();
     if (res.status === 'posted') {
-      // Equal scores list oldest first, so this score is the last match.
-      const mine = res.top.map((t) => t.initials === initials && t.score === score).lastIndexOf(true);
-      box.innerHTML = `<p class="label" style="color:#5b6b68">${m.name} leaderboard</p>${onlineHtml(res.top, mine)}${
-        mine < 0 ? `<p class="lb-note">Posted at number ${res.rank}.</p>` : ''
-      }`;
+      const mine = res.top.map((t) => t.initials === initials && t.score === result.score).lastIndexOf(true);
+      box.innerHTML = `${boardLabel(m)}${onlineHtml(res.top, mine)}${mine < 0 ? `<p class="lb-note">Posted at number ${res.rank}.</p>` : ''}`;
     } else if (res.status === 'queued') {
       box.innerHTML = `<p class="lb-note">Saved. Your score will post next time you're online.</p>`;
     } else {

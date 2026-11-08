@@ -4,7 +4,8 @@ import type { ModeId } from '../modes/mode';
 import { loadCutoff, loadPending, saveCutoff, savePending, type PendingScore } from './storage';
 
 const BASE: string = (import.meta.env.VITE_LEADERBOARD_URL ?? '').replace(/\/$/, '');
-const TOP = 10;
+/** How many places each board shows. */
+export const TOP = 10;
 const MAX_PENDING = 10;
 
 /** False when the build has no leaderboard address; the game then sticks to local scores. */
