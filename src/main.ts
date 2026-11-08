@@ -657,7 +657,13 @@ async function offerOnline(m: GameMode, score: number, level: number, bestWord: 
   const input = form.querySelector('input')!;
   const button = form.querySelector('button')!;
   const note = form.querySelector('.lb-note')!;
-  input.addEventListener('input', () => (input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3)));
+  // Post stays disabled until there are exactly three letters.
+  const ready = () => (button.disabled = !/^[A-Z]{3}$/.test(input.value));
+  input.addEventListener('input', () => {
+    input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    ready();
+  });
+  ready();
   input.focus();
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -677,7 +683,7 @@ async function offerOnline(m: GameMode, score: number, level: number, bestWord: 
     } else if (res.status === 'queued') {
       box.innerHTML = `<p class="lb-note">Saved. Your score will post next time you're online.</p>`;
     } else {
-      button.disabled = false;
+      ready();
       note.textContent = res.error === 'blocked-initials' ? 'Try different initials.' : "Sorry, that score couldn't be posted.";
     }
   });
