@@ -346,6 +346,8 @@
   text-align: center;
 }
 .adv-info {
+  /* Size it from the board, not its text, so a long list of enemy powers scrolls instead of stretching the board. */
+  contain: size;
   display: flex;
   flex-direction: column;
   gap: 4px;
