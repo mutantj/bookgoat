@@ -6,6 +6,8 @@ export const TUNING = {
   minWordLength: 3,
 
   hero: { hp: 30 },
+  /** Damage past what finishes an enemy heals Rapunzel by this much per point (1 = all of it), up to full health. */
+  overkillHeal: 1,
 
   /** Damage per letter, before multipliers. Starts as a copy of Classic's letter values. */
   letterDamage: { ...RULES.letterValues } as Record<string, number>,

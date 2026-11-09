@@ -286,6 +286,65 @@ export function createAdventure(host: AdventureHost) {
     window.setTimeout(() => el.remove(), 1000);
   }
 
+  /**
+   * Overkill: a glowing "+N" leaves the beaten enemy and arcs across the arena into Rapunzel, trailing little
+   * plus sparks. Resolves when it lands.
+   */
+  async function flyHeal(amount: number) {
+    const arena = document.querySelector<HTMLElement>('.adv-arena')!;
+    const box = arena.getBoundingClientRect();
+    const centre = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left + r.width / 2 - box.left, y: r.top + r.height * 0.45 - box.top };
+    };
+    const from = centre($('adv-enemy-wrap'));
+    const to = centre($('adv-hero'));
+    const orb = document.createElement('span');
+    orb.className = 'adv-heal-orb';
+    orb.textContent = `+${amount}`;
+    orb.style.left = `${from.x}px`;
+    orb.style.top = `${from.y}px`;
+    arena.appendChild(orb);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      await wait(300);
+      return orb.remove();
+    }
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const lift = -Math.max(40, box.height * 0.35); // how high the arc rises
+    const point = (t: number) => ({ x: dx * t, y: dy * t + lift * 4 * t * (1 - t) });
+    const frames: Keyframe[] = [];
+    for (let k = 0; k <= 10; k++) {
+      const t = k / 10;
+      const p = point(t);
+      const scale = k === 0 ? 0.4 : k < 3 ? 1.25 : 1.25 - 0.45 * t;
+      frames.push({ offset: t, transform: `translate(calc(-50% + ${p.x}px), calc(-50% + ${p.y}px)) scale(${scale})` });
+    }
+    const duration = 750;
+    // Sparks drop off the orb along the way and fade.
+    for (let i = 0; i < 6; i++) {
+      window.setTimeout(() => {
+        const p = point((i + 1) / 7);
+        const spark = document.createElement('span');
+        spark.className = 'adv-heal-spark';
+        spark.textContent = '+';
+        spark.style.left = `${from.x + p.x}px`;
+        spark.style.top = `${from.y + p.y}px`;
+        arena.appendChild(spark);
+        const drift = (Math.random() - 0.5) * 24;
+        spark.animate(
+          [
+            { transform: 'translate(-50%, -50%) scale(1)', opacity: 0.9 },
+            { transform: `translate(calc(-50% + ${drift}px), calc(-50% + 18px)) scale(0.5)`, opacity: 0 },
+          ],
+          { duration: 500, easing: 'ease-out' },
+        ).onfinish = () => spark.remove();
+      }, (duration * (i + 1)) / 7);
+    }
+    await orb.animate(frames, { duration, easing: 'ease-in-out', fill: 'forwards' }).finished;
+    orb.remove();
+  }
+
   function hurt(id: string) {
     const el = $(id);
     el.classList.remove('hurt');
@@ -322,10 +381,22 @@ export function createAdventure(host: AdventureHost) {
     await wait(220);
     $('adv-hero').classList.remove('lunge');
     // In the tutorial the dummy stays up until every step is done.
+    const overkill = Math.max(0, total - enemyHp);
     enemyHp = Math.max(step >= 0 ? 1 : 0, enemyHp - total);
     hurt('adv-enemy-wrap');
     pop('enemy', `−${total}`);
     say(`${w.toUpperCase()}! ${usedGem ? 'Gem power!' : 'Take that!'}`);
+    // Damage past the enemy's last point of health flies back to heal Rapunzel.
+    const heal = enemyHp <= 0 ? Math.min(Math.round(overkill * TUNING.overkillHeal), TUNING.hero.hp - heroHp) : 0;
+    const healed =
+      heal > 0 &&
+      flyHeal(heal).then(() => {
+        heroHp += heal;
+        renderHealth();
+        pop('hero', `+${heal}`, 'heal');
+        goat.react('cheer');
+      });
+    if (heal > 0) say(`${w.toUpperCase()}! Overkill: Rapunzel gets ${heal} health back!`);
 
     // The used tiles are gone for good: the columns fall and new letters drop in on top.
     const created = refill(board, used, makeTile);
@@ -343,7 +414,7 @@ export function createAdventure(host: AdventureHost) {
     renderHealth();
     renderBoard(new Set(created.map((t) => t.id)));
 
-    await wait(650);
+    await Promise.all([wait(650), healed]);
     if (enemyHp <= 0) return win();
     await enemyTurn();
     if (heroHp > 0 && s?.action === 'word') advance();
