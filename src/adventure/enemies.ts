@@ -28,6 +28,9 @@ export interface EnemyPower {
   damage?(damage: number, word: WordInfo): number;
   /** Change how hard this enemy hits. */
   hit?(hit: number, info: HitInfo): number;
+  /** Letters this power affects. Their tiles are marked on the board while the enemy is fought: light red for a
+   * hex, icy teal for frost. */
+  marks?: { letters: string[]; style: 'hex' | 'frost' };
 }
 
 export interface Enemy {
@@ -83,7 +86,7 @@ const TOWER_ROAD: Enemy[] = [
     hue: 150,
     taunt: 'Brr. Your words feel cold already.',
     powers: [
-      { name: 'Icy hide', text: 'Words with an S do 2 less damage.', damage: (d, w) => (w.word.includes('s') ? d - 2 : d) },
+      { name: 'Icy hide', text: 'Words with a frozen S do 2 less damage.', marks: { letters: ['S'], style: 'frost' }, damage: (d, w) => (w.word.includes('s') ? d - 2 : d) },
       { name: 'Chill', text: 'Every third hit does double damage.', hit: (h, i) => (i.turn % 3 === 0 ? h * 2 : h) },
     ],
   },
@@ -130,7 +133,7 @@ const SWAMP: Enemy[] = [
     hue: 260,
     taunt: 'A goat! Just what my stew needs.',
     powers: [
-      { name: 'Hex', text: 'Words with an E do 3 less damage.', damage: (d, w) => (w.word.includes('e') ? d - 3 : d) },
+      { name: 'Hex', text: 'Words with a hexed E do 3 less damage.', marks: { letters: ['E'], style: 'hex' }, damage: (d, w) => (w.word.includes('e') ? d - 3 : d) },
       { name: 'Bubbling brew', text: 'Hits 1 harder every turn.', hit: (h, i) => h + i.turn - 1 },
     ],
   },

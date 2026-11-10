@@ -91,6 +91,10 @@ export function createAdventure(host: AdventureHost) {
     return Math.round(e.powers.reduce((h, p) => p.hit?.(h, info) ?? h, e.hit));
   }
 
+  /** How one of the enemy's powers marks this tile's letter ('hex' or 'frost'), if it does. */
+  const markOf = (t: Tile) => enemy().powers.find((p) => p.marks?.letters.includes(t.letter))?.marks?.style;
+  const MARK_NAMES = { hex: 'hexed', frost: 'frozen' };
+
   const tileFace = (t: Tile) => {
     const v = TUNING.letterDamage[t.letter] ?? 1;
     return `<div class="tile-face"><span class="tile-letter${t.letter === 'Qu' ? ' qu' : ''}">${t.letter}</span><span class="tile-value">${v !== 1 ? num(v) : ''}</span></div>`;
@@ -109,9 +113,11 @@ export function createAdventure(host: AdventureHost) {
         el.className = 'tile adv-tile';
         if (fresh.has(t.id)) el.classList.add('drop');
         el.classList.toggle('gem', t.kind !== 'normal');
+        const mark = markOf(t);
+        if (mark) el.dataset.mark = mark;
         el.dataset.kind = t.kind;
         el.setAttribute('role', 'gridcell');
-        el.setAttribute('aria-label', t.kind === 'normal' ? t.letter : `${t.letter} (${t.kind} gem)`);
+        el.setAttribute('aria-label', `${t.letter}${t.kind !== 'normal' ? ` (${t.kind} gem)` : ''}${mark ? ` (${MARK_NAMES[mark]})` : ''}`);
         el.innerHTML = tileFace(t);
         boardEl.appendChild(el);
       }
@@ -149,6 +155,8 @@ export function createAdventure(host: AdventureHost) {
       b.type = 'button';
       b.className = `tile adv-tray-tile${t.kind !== 'normal' ? ' gem' : ''}${grew && i === selection.length - 1 ? ' new' : ''}`;
       b.dataset.kind = t.kind;
+      const mark = markOf(t);
+      if (mark) b.dataset.mark = mark;
       b.setAttribute('aria-label', i === selection.length - 1 ? `Put back ${t.letter}` : `Put back ${t.letter} and the letters after it`);
       b.innerHTML = tileFace(t);
       b.addEventListener('click', () => unpick(i));

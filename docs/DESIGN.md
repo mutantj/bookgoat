@@ -67,6 +67,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 
 - **Tutorial:** the Hay Dummy is a scripted lesson (`tutorial.ts`) with a fixed board and fixed refills: spell CAT, HORSE, then GOAT using the gem, then Scramble, then any word. The dummy can't drop below 1 health until the steps are done. **Skip tutorial** jumps to the first troll.
 - Each enemy has powers that change damage or hits, e.g. "words with an S do 2 less damage" or "every third hit does double". The powers are listed in the notes panel.
+- A power can **mark** the letters it affects (`marks` on the power), shown on the board and in the word bar. A **hex** is light red with a small ✶ (the Swamp Hag hexes E). **Frost** is icy teal with a ❄ (the Frost Troll freezes S); its teal is kept clear of the sapphire and diamond gem blues.
 - Each stage has its own scenery (`data-biome` on the screen: `mountain` or `swamp`).
 
 **Artifacts (`artifacts.ts`, numbers in `tuning.ts`):**

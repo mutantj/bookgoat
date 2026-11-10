@@ -320,6 +320,38 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Tiles marked by an enemy power, with a small symbol in the corner (the gem diamond uses the other corner).
+   Hex: light red. Frost: icy teal, kept well away from the sapphire and diamond gem blues. */
+.adventure .tile[data-mark] .tile-face::before {
+  position: absolute;
+  right: calc(var(--s) * 0.08);
+  top: calc(var(--s) * 0.02);
+  font-size: calc(var(--s) * 0.24);
+  line-height: 1;
+}
+.adventure .tile[data-mark='hex'] .tile-face {
+  background: linear-gradient(160deg, #ffe1dc 0%, #f4b3a8 55%, #e0897b 100%);
+  box-shadow: inset 0 -4px 0 #a8473a, inset 0 0 0 2px #d9534a, 0 0 10px rgba(217, 83, 74, 0.55);
+}
+.adventure .tile[data-mark='hex'] .tile-face::before {
+  content: '✶';
+  color: #b3261e;
+}
+.adventure .tile[data-mark='frost'] .tile-face {
+  background: linear-gradient(160deg, #e2f7f4 0%, #9edbd4 55%, #5fbcb4 100%);
+  box-shadow: inset 0 -4px 0 #17706d, inset 0 0 0 2px #1c9a96, 0 0 10px rgba(28, 154, 150, 0.55);
+}
+.adventure .tile[data-mark='frost'] .tile-face::before {
+  content: '❄';
+  color: #0f5f5c;
+}
+/* In a valid word the marked tiles keep their colour, so it's clear why the damage dropped. */
+.adv-word-bar.valid .adv-tray .tile[data-mark='hex'] .tile-face {
+  box-shadow: inset 0 -3px 0 #a8473a, inset 0 0 0 2px #d9534a, 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.adv-word-bar.valid .adv-tray .tile[data-mark='frost'] .tile-face {
+  box-shadow: inset 0 -3px 0 #17706d, inset 0 0 0 2px #1c9a96, 0 1px 2px rgba(0, 0, 0, 0.35);
+}
 /* A picked tile leaves an empty slot until the attack. */
 .adv-board .tile.taken .tile-face {
   visibility: hidden;
