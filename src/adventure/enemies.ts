@@ -1,11 +1,16 @@
-// Adventure enemies, in the order they're fought. The first one is the tutorial.
+// Adventure stages and their enemies, in the order they're fought. The first stage, the Tower Road, is the
+// tutorial: a hay dummy that walks through the mechanics, then three trolls.
 import trollSvg from '../../art/troll.svg?raw';
 import dummySvg from '../../art/haydummy.svg?raw';
+import bogSvg from '../../art/bogbeast.svg?raw';
+import type { ArtifactId } from './artifacts';
 
 /** What an enemy power sees about the word being played. */
 export interface WordInfo {
   word: string;
   length: number;
+  /** How many gem tiles the word uses. */
+  gems: number;
 }
 
 /** What an enemy power sees when the enemy is about to hit. */
@@ -39,9 +44,20 @@ export interface Enemy {
   tutorial?: boolean;
 }
 
-export const STAGE = 'The Tower Road';
+export interface Stage {
+  name: string;
+  /** Shown above the name in the top bar. */
+  label: string;
+  /** Sets the arena's scenery (see adventure.css). */
+  biome: 'mountain' | 'swamp';
+  /** Rapunzel's health at the start of the stage, if not full. Health carries from one battle to the next. */
+  startHp?: number;
+  /** The artifact won by clearing the stage. */
+  reward?: ArtifactId;
+  enemies: Enemy[];
+}
 
-export const ENEMIES: Enemy[] = [
+const TOWER_ROAD: Enemy[] = [
   {
     name: 'Hay Dummy',
     hp: 30,
@@ -83,4 +99,44 @@ export const ENEMIES: Enemy[] = [
       { name: 'Hot temper', text: 'Hits half again as hard below half health.', hit: (h, i) => (i.health < 0.5 ? h * 1.5 : h) },
     ],
   },
+];
+
+const SWAMP: Enemy[] = [
+  {
+    name: 'Mire Toad',
+    hp: 40,
+    hit: 4,
+    art: bogSvg,
+    taunt: 'Rapunzel squelches into the swamp, still sore from the trolls…',
+    powers: [{ name: 'Slime', text: 'Words without a gem do 2 less damage.', damage: (d, w) => (w.gems ? d : d - 2) }],
+  },
+  {
+    name: 'Bog Lurker',
+    hp: 52,
+    hit: 5,
+    art: bogSvg,
+    hue: 200,
+    taunt: 'Glub. Nobody leaves the bog.',
+    powers: [
+      { name: 'Murky', text: 'Words under 4 letters do half damage.', damage: (d, w) => (w.length < 4 ? d / 2 : d) },
+      { name: 'Lurk', text: 'Every other hit does 1.5 times the damage.', hit: (h, i) => (i.turn % 2 === 0 ? h * 1.5 : h) },
+    ],
+  },
+  {
+    name: 'Swamp Hag',
+    hp: 66,
+    hit: 5,
+    art: bogSvg,
+    hue: 260,
+    taunt: 'A goat! Just what my stew needs.',
+    powers: [
+      { name: 'Hex', text: 'Words with an E do 3 less damage.', damage: (d, w) => (w.word.includes('e') ? d - 3 : d) },
+      { name: 'Bubbling brew', text: 'Hits 1 harder every turn.', hit: (h, i) => h + i.turn - 1 },
+    ],
+  },
+];
+
+export const STAGES: Stage[] = [
+  { name: 'The Tower Road', label: 'Tutorial', biome: 'mountain', reward: 'goldenHorn', enemies: TOWER_ROAD },
+  { name: 'The Murky Swamp', label: 'Chapter 1', biome: 'swamp', startHp: 10, enemies: SWAMP },
 ];

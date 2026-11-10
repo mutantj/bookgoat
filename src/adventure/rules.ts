@@ -55,18 +55,18 @@ export function tilesFor(board: Board, word: string, taken: Pos[] = []): Pos[] |
   return out;
 }
 
-/** The damage a word does, and the working, e.g. "4 × 1.25 × 1.25 gem". */
-export function damageFor(tiles: Tile[], enemy: Enemy, braided: boolean): { total: number; math: string } {
+/** The damage a word does, and the working, e.g. "4 × 1.25 × 1.25 gem". `boost` is an artifact's multiplier, if one is in use. */
+export function damageFor(tiles: Tile[], enemy: Enemy, boost?: { multiplier: number; name: string }): { total: number; math: string } {
   const word = tiles.map((t) => t.letter.toLowerCase()).join('');
   const letters = tiles.reduce((sum, t) => sum + (TUNING.letterDamage[t.letter] ?? 1), 0);
   const length = lengthMultiplier(word.length);
   const gem = tiles.reduce((m, t) => m * (isGem(t) ? TUNING.gemMultiplier[t.kind] : 1), 1);
-  const braid = braided ? TUNING.powerUps.braid.multiplier : 1;
-  const raw = letters * length * gem * braid;
-  const afterPowers = enemy.powers.reduce((d, p) => p.damage?.(d, { word, length: word.length }) ?? d, raw);
+  const raw = letters * length * gem * (boost?.multiplier ?? 1);
+  const gems = tiles.filter(isGem).length;
+  const afterPowers = enemy.powers.reduce((d, p) => p.damage?.(d, { word, length: word.length, gems }) ?? d, raw);
   const parts = [`${num(letters)} × ${num(length)}`];
   if (gem !== 1) parts.push(`× ${num(gem)} gem`);
-  if (braid !== 1) parts.push(`× ${num(braid)} braid`);
+  if (boost) parts.push(`× ${num(boost.multiplier)} ${boost.name}`);
   if (afterPowers !== raw) parts.push(`then ${enemy.powers.filter((p) => p.damage).map((p) => p.name).join(', ')}`);
   return { total: Math.max(TUNING.minDamage, Math.round(afterPowers)), math: parts.join(' ') };
 }

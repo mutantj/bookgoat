@@ -25,23 +25,14 @@ export const TUNING = {
   /** Damage is rounded to a whole number, and a real word always does at least this much. */
   minDamage: 1,
 
-  /** `start` is how many the tutorial gives. The troll battles start with none and keep any earned along the way. */
-  powerUps: {
-    /** Heals Rapunzel. Using a power-up doesn't take a turn. */
-    apple: { start: 2, heal: 8 },
-    /** Blocks the enemy's next hit completely. */
-    hayBale: { start: 1 },
-    /** Multiplies the next word's damage. */
-    braid: { start: 0, multiplier: 2 },
+  /** How many artifacts Rapunzel can carry. Empty slots show beside the board. */
+  artifactSlots: 3,
+  artifacts: {
+    /** Golden Troll Horn, won by clearing the Tower Road: tap it and the next word does this many times the damage.
+     * Then it needs `rechargeWords` words of at least `rechargeLength` letters before it can be used again. */
+    goldenHorn: { multiplier: 2, rechargeLength: 6, rechargeWords: 2 },
   },
-  /** A word at least this long earns a golden braid. */
-  braidForLength: 6,
-
-  /** Most of each power-up you can hold. */
-  maxPowerUps: 9,
 };
-
-export type PowerId = keyof typeof TUNING.powerUps;
 
 export function lengthMultiplier(length: number): number {
   const table = TUNING.lengthMultiplier;

@@ -1,22 +1,19 @@
 // Adventure mode: Rapunzel battles enemies above a 4×4 board. Tap tiles in any order to build a word; each
 // one moves up into the word bar. Every word is an attack, and the enemy hits back after each one.
-// Board rules are in rules.ts, numbers in tuning.ts, enemies in enemies.ts, the tutorial in tutorial.ts.
+// Board rules are in rules.ts, numbers in tuning.ts, enemies in enemies.ts, the tutorial in tutorial.ts, artifacts in
+// artifacts.ts. The run is saved after every turn (save.ts), so closing the game and coming back carries on.
 import './adventure.css';
 import { TileFactory, type Pos, type Tile } from '../engine/board';
 import { Rng } from '../engine/rng';
 import type { GemKind } from '../engine/rules';
 import { dict } from '../modes/mode';
 import { Goat } from '../ui/goat';
-import { ENEMIES, STAGE, type Enemy } from './enemies';
+import { STAGES, type Enemy } from './enemies';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_DONE, TUTORIAL_REFILLS, type TutorialStep } from './tutorial';
 import { SIZE, damageFor, makeBoard, num, refill, tilesFor, type Board } from './rules';
-import { TUNING, gemForLength, type PowerId } from './tuning';
-
-const POWER_UPS: { id: PowerId; icon: string; name: string; text: () => string }[] = [
-  { id: 'apple', icon: '🍎', name: 'Apple', text: () => `Heals ${TUNING.powerUps.apple.heal} health.` },
-  { id: 'hayBale', icon: '🌾', name: 'Hay bale', text: () => 'Blocks the next hit.' },
-  { id: 'braid', icon: '✨', name: 'Golden braid', text: () => `Your next word does ×${TUNING.powerUps.braid.multiplier} damage.` },
-];
+import { TUNING, gemForLength } from './tuning';
+import { ARTIFACTS, chargeAfterWord, fullCharge, isReady, type ArtifactId, type OwnedArtifact } from './artifacts';
+import { loadArtifacts, loadRun, saveArtifacts, saveRun } from './save';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
@@ -44,19 +41,22 @@ export function createAdventure(host: AdventureHost) {
   /** The tiles moved up into the word, in order. Their places on the board stay empty until the attack. */
   let selection: Pos[] = [];
   let busy = false;
+  let stage = 0;
   let battle = 0;
   let heroHp: number = TUNING.hero.hp;
   let startHp: number = TUNING.hero.hp; // health at the start of this battle, for a retry
-  let startPowers: Record<PowerId, number> = { apple: 0, hayBale: 0, braid: 0 }; // power-ups at the start of this battle, for a retry
   let enemyHp = 0;
   let enemyTurns = 0;
-  let powers: Record<PowerId, number> = { apple: 0, hayBale: 0, braid: 0 };
-  let guarded = false; // hay bale up
-  let braided = false; // next word doubled
+  /** Artifacts Rapunzel owns, kept between runs, and how they stood when this battle began (for a retry). */
+  let artifacts: OwnedArtifact[] = loadArtifacts();
+  let startArtifacts: OwnedArtifact[] = artifacts;
+  /** The artifact triggered for the next word, if any. */
+  let armed: ArtifactId | null = null;
   /** Index into TUTORIAL while the tutorial is running, otherwise -1. */
   let step = -1;
   let refills: string[] = [];
-  const enemy = () => ENEMIES[battle];
+  const enemies = () => STAGES[stage].enemies;
+  const enemy = () => enemies()[battle];
   const tutorialStep = (): TutorialStep | null => (step >= 0 ? TUTORIAL[step] : null);
 
   /* ---------- Board ---------- */
@@ -81,7 +81,8 @@ export function createAdventure(host: AdventureHost) {
   const word = () => wordOf(selection);
   const isWord = () => word().length >= TUNING.minWordLength && dict.has(word());
 
-  const damage = (path = selection) => damageFor(path.map(at), enemy(), braided);
+  const boost = () => (armed ? { multiplier: TUNING.artifacts[armed].multiplier, name: 'horn' } : undefined);
+  const damage = (path = selection) => damageFor(path.map(at), enemy(), boost());
 
   /** How hard the enemy's next hit will be. */
   function nextHit() {
@@ -118,12 +119,12 @@ export function createAdventure(host: AdventureHost) {
   }
 
   /** May the player use this right now? The tutorial allows only the step's action. */
-  function allowed(action: 'word' | 'scramble' | PowerId): boolean {
+  function allowed(action: 'word' | 'scramble' | 'artifact'): boolean {
     if (busy) return false;
     const s = tutorialStep();
     if (!s) return true;
     if (s.action === 'word') return action === 'word' || (action === 'scramble' && !s.word); // a way out of a stuck board
-    return s.action === 'power' ? action === s.power : action === 'scramble';
+    return action === 'scramble';
   }
 
   function renderSelection() {
@@ -195,29 +196,34 @@ export function createAdventure(host: AdventureHost) {
 
   /* ---------- Beside the board ---------- */
 
+  /** The artifact slots beside the board: owned artifacts first, then empty holders. */
   function renderPowers() {
     const box = $('adv-powers');
-    const s = tutorialStep();
-    if (!box.children.length)
-      for (const p of POWER_UPS) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'adv-power';
-        b.dataset.id = p.id;
-        b.innerHTML = `<span class="adv-power-icon" aria-hidden="true">${p.icon}</span><span class="adv-power-count"></span>`;
-        b.addEventListener('click', () => usePower(p.id));
+    box.innerHTML = '';
+    for (let i = 0; i < TUNING.artifactSlots; i++) {
+      const owned = artifacts[i];
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'adv-power';
+      if (!owned) {
+        b.classList.add('empty');
+        b.disabled = true;
+        b.setAttribute('aria-label', 'Empty artifact slot');
+        b.title = 'Empty artifact slot';
         box.appendChild(b);
+        continue;
       }
-    for (const p of POWER_UPS) {
-      const b = box.querySelector<HTMLButtonElement>(`[data-id="${p.id}"]`)!;
-      const n = powers[p.id];
-      const active = (p.id === 'hayBale' && guarded) || (p.id === 'braid' && braided);
-      b.disabled = n === 0 || active || !allowed(p.id) || (p.id === 'apple' && heroHp >= TUNING.hero.hp);
-      b.classList.toggle('active', active);
-      b.classList.toggle('hint', s?.action === 'power' && s.power === p.id);
-      b.title = `${p.name}: ${p.text()}`;
-      b.setAttribute('aria-label', `${p.name}, ${n} left: ${p.text()}`);
-      b.querySelector('.adv-power-count')!.textContent = String(n);
+      const info = ARTIFACTS[owned.id];
+      const ready = isReady(owned);
+      const pips = Array.from({ length: fullCharge(owned.id) }, (_, k) => `<i${k < owned.charge ? ' class="on"' : ''}></i>`).join('');
+      b.innerHTML = `<span class="adv-power-icon">${info.icon}</span><span class="adv-charge" aria-hidden="true">${pips}</span>`;
+      b.disabled = !ready || !allowed('artifact');
+      b.classList.toggle('ready', !b.disabled && armed !== owned.id);
+      b.classList.toggle('active', armed === owned.id);
+      b.title = `${info.name}: ${info.text()}`;
+      b.setAttribute('aria-label', `${info.name}, ${armed === owned.id ? 'ready for the next word' : ready ? 'charged' : `charging, ${owned.charge} of ${fullCharge(owned.id)}`}: ${info.text()}`);
+      b.addEventListener('click', () => useArtifact(owned.id));
+      box.appendChild(b);
     }
   }
 
@@ -233,29 +239,17 @@ export function createAdventure(host: AdventureHost) {
         : `<p class="adv-info-none">None. It's just hay.</p>`);
   }
 
-  async function usePower(id: PowerId) {
-    if (!allowed(id) || powers[id] <= 0) return;
-    powers[id]--;
-    if (id === 'apple') {
-      const heal = Math.min(TUNING.powerUps.apple.heal, TUNING.hero.hp - heroHp);
-      heroHp += heal;
-      pop('hero', `+${heal}`, 'heal');
-      goat.react('chew');
-      say('Crunchy! Much better.');
-    } else if (id === 'hayBale') {
-      guarded = true;
-      say("I'll hide behind this hay.");
-    } else {
-      braided = true;
-      say(`My braid is glowing! Next word does ×${TUNING.powerUps.braid.multiplier} damage.`);
+  /** Tap a charged artifact to use it on the next word; tap again to put it away. */
+  function useArtifact(id: ArtifactId) {
+    if (!allowed('artifact')) return;
+    if (armed === id) armed = null;
+    else {
+      armed = id;
+      say(`The ${ARTIFACTS[id].name} glows! My next word does ×${TUNING.artifacts[id].multiplier} damage.`);
     }
     renderHealth();
-    const s = tutorialStep();
-    if (s?.action === 'power' && s.power === id) {
-      await wait(900);
-      advance();
-    }
     renderSelection();
+    save();
   }
 
   /* ---------- Battle ---------- */
@@ -272,7 +266,7 @@ export function createAdventure(host: AdventureHost) {
     $('adv-enemy-hp').style.width = `${(enemyHp / e.hp) * 100}%`;
     $('adv-enemy-hp-text').textContent = `${enemyHp}/${e.hp}`;
     $('adv-hero-bar').classList.toggle('low', heroHp <= max * 0.3);
-    $('adv-hero-status').textContent = `${guarded ? '🌾' : ''}${braided ? '✨' : ''}`;
+    $('adv-hero-status').innerHTML = armed ? ARTIFACTS[armed].icon : '';
     goat.setWorried(heroHp > 0 && heroHp <= max * 0.3);
     renderInfo();
   }
@@ -373,7 +367,10 @@ export function createAdventure(host: AdventureHost) {
     const used = selection;
     const w = word();
     const usedGem = used.some((p) => at(p).kind !== 'normal');
-    braided = false;
+    // The artifact is spent on this word; later long words recharge it.
+    if (armed) artifacts = artifacts.map((a) => (a.id === armed ? { ...a, charge: 0 } : a));
+    else artifacts = chargeAfterWord(artifacts, w.length);
+    armed = null;
     busyRender();
 
     goat.react('chew');
@@ -406,10 +403,6 @@ export function createAdventure(host: AdventureHost) {
       host.gemSpawned(gem);
     }
     for (const t of created) delete t.fresh;
-    if (w.length >= TUNING.braidForLength && powers.braid < TUNING.maxPowerUps) {
-      powers.braid++;
-      pop('hero', '+✨', 'heal');
-    }
     selection = [];
     renderHealth();
     renderBoard(new Set(created.map((t) => t.id)));
@@ -418,6 +411,7 @@ export function createAdventure(host: AdventureHost) {
     if (enemyHp <= 0) return win();
     await enemyTurn();
     if (heroHp > 0 && s?.action === 'word') advance();
+    if (heroHp > 0) save();
   }
 
   /** Lock the buttons while the attack plays out, keeping the word in view. */
@@ -434,14 +428,9 @@ export function createAdventure(host: AdventureHost) {
     $('adv-enemy-wrap').classList.add('lunge');
     await wait(220);
     $('adv-enemy-wrap').classList.remove('lunge');
-    if (guarded) {
-      guarded = false;
-      pop('hero', 'Blocked!', 'heal');
-    } else {
-      heroHp = Math.max(0, heroHp - hit);
-      hurt('adv-hero');
-      pop('hero', `−${hit}`);
-    }
+    heroHp = Math.max(0, heroHp - hit);
+    hurt('adv-hero');
+    pop('hero', `−${hit}`);
     renderHealth();
     if (heroHp <= 0) return lose();
     await wait(400);
@@ -460,6 +449,7 @@ export function createAdventure(host: AdventureHost) {
     await wait(500);
     await enemyTurn();
     if (tutorialStep()?.action === 'scramble') advance();
+    if (heroHp > 0) save();
   }
 
   function showResult(title: string, text: string, action: string, then: () => void) {
@@ -475,52 +465,81 @@ export function createAdventure(host: AdventureHost) {
     btn.focus();
   }
 
+  /** Save the run as it stands, and the artifacts. */
+  function save() {
+    saveArtifacts(artifacts);
+    saveRun({
+      stage,
+      battle,
+      startHp,
+      startArtifacts,
+      live: { heroHp, enemyHp, enemyTurns, board, step, refills, armed },
+    });
+  }
+
   function win() {
     goat.react('cheer');
     $('adv-enemy-wrap').classList.add('defeated');
     const e = enemy();
     say(e.tutorial ? 'I think I got the hang of it!' : 'Ha! Too easy.');
-    const last = battle === ENEMIES.length - 1;
-    // Health and power-ups carry from one troll to the next. Leaving the tutorial, she has full health and no power-ups.
-    const carry = !last && !e.tutorial ? { hp: heroHp, powers: { ...powers } } : undefined;
-    window.setTimeout(
-      () =>
-        showResult(
-          last ? 'Chapter cleared!' : e.tutorial ? 'Tutorial done!' : 'Victory!',
-          last
-            ? `Rapunzel made it down ${STAGE}.`
-            : e.tutorial
-              ? 'Time for a real fight. The practice power-ups stay here, so earn your own along the way.'
-              : `The ${e.name} runs off into the trees. Rapunzel goes on with ${heroHp}/${TUNING.hero.hp} health.`,
-          last ? 'Play again' : 'Next battle',
-          () => startBattle(last ? 0 : battle + 1, carry),
-        ),
-      700,
-    );
+    const here = STAGES[stage];
+    const last = battle === enemies().length - 1;
+    let title = e.tutorial ? 'Tutorial done!' : 'Victory!';
+    let text: string;
+    let action = 'Next battle';
+    let next: () => void;
+    if (last) {
+      // Clearing a stage wins its treasure, which she keeps from now on, and moves on to the next stage (or
+      // replays the last one there is).
+      const reward = here.reward;
+      const isNew = !!reward && !artifacts.some((a) => a.id === reward) && artifacts.length < TUNING.artifactSlots;
+      if (reward && isNew) artifacts = [...artifacts, { id: reward, charge: fullCharge(reward) }];
+      renderPowers();
+      const to = Math.min(stage + 1, STAGES.length - 1);
+      const onward = to !== stage;
+      title = `${here.name} cleared!`;
+      text = `Rapunzel made it through ${here.name}.${reward && isNew ? ` She found the ${ARTIFACTS[reward].name}! ${ARTIFACTS[reward].text()}` : ''}${
+        onward ? ` Next: ${STAGES[to].name}.` : ''
+      }`;
+      action = onward ? 'Onward' : 'Play again';
+      saveArtifacts(artifacts);
+      saveRun({ stage: to, battle: 0, startHp: STAGES[to].startHp ?? TUNING.hero.hp, startArtifacts: artifacts });
+      next = () => startBattle(to, 0);
+    } else {
+      // Health and artifacts carry from one battle to the next. Leaving the tutorial dummy, she has full health.
+      const carry = { hp: e.tutorial ? TUNING.hero.hp : heroHp, artifacts };
+      saveArtifacts(artifacts);
+      saveRun({ stage, battle: battle + 1, startHp: carry.hp, startArtifacts: artifacts });
+      text = e.tutorial ? 'Time for a real fight.' : `The ${e.name} slinks away. Rapunzel goes on with ${heroHp}/${TUNING.hero.hp} health.`;
+      next = () => startBattle(stage, battle + 1, carry);
+    }
+    window.setTimeout(() => showResult(title, text, action, next), 700);
   }
 
   function lose() {
     goat.setSad(true);
     say('Ow… I need a nap.');
-    window.setTimeout(() => showResult('Rapunzel needs a rest', `The ${enemy().name} wins this time.`, 'Try again', () => startBattle(battle, { hp: startHp, powers: startPowers })), 700);
+    // Coming back after closing the game also starts this battle again.
+    saveArtifacts(startArtifacts);
+    saveRun({ stage, battle, startHp, startArtifacts });
+    window.setTimeout(() => showResult('Rapunzel needs a rest', `The ${enemy().name} wins this time.`, 'Try again', () => startBattle(stage, battle, { hp: startHp, artifacts: startArtifacts })), 700);
   }
 
   /**
-   * The tutorial gives the starting power-ups to practise with. A troll battle starts with what `carry` holds, the
-   * health and power-ups left after the last troll, or else full health and no power-ups. A retry passes what she had
-   * when the battle first began.
+   * Start battle `n` of stage `s` with what `carry` holds (the health and artifacts left after the last battle, or
+   * what she had when this battle first began, for a retry). Otherwise she has the artifacts she owns, and the
+   * stage's starting health (full unless the stage says otherwise).
    */
-  function startBattle(n: number, carry?: { hp: number; powers: Record<PowerId, number> }) {
+  function startBattle(s: number, n: number, carry?: { hp: number; artifacts: OwnedArtifact[] }) {
+    stage = s;
     battle = n;
     const e = enemy();
-    heroHp = startHp = carry?.hp ?? TUNING.hero.hp;
+    const here = STAGES[stage];
+    heroHp = startHp = carry?.hp ?? (n === 0 ? (here.startHp ?? TUNING.hero.hp) : TUNING.hero.hp);
     enemyHp = e.hp;
     enemyTurns = 0;
-    powers = e.tutorial
-      ? { apple: TUNING.powerUps.apple.start, hayBale: TUNING.powerUps.hayBale.start, braid: TUNING.powerUps.braid.start }
-      : { ...(carry?.powers ?? { apple: 0, hayBale: 0, braid: 0 }) };
-    startPowers = { ...powers };
-    guarded = braided = false;
+    artifacts = startArtifacts = carry?.artifacts ?? artifacts;
+    armed = null;
     busy = false;
     selection = [];
     step = e.tutorial ? 0 : -1;
@@ -531,20 +550,49 @@ export function createAdventure(host: AdventureHost) {
     wrap.style.setProperty('--hue', `${e.hue ?? 0}deg`);
     $('adv-enemy').innerHTML = inlineSvg(e.art);
     $('adv-enemy-name').textContent = e.name;
-    const fights = ENEMIES.filter((x) => !x.tutorial);
+    const fights = enemies().filter((x) => !x.tutorial);
     $('adv-battle').textContent = e.tutorial ? 'Tutorial' : `Battle ${fights.indexOf(e) + 1} / ${fights.length}`;
-    $('adv-stage').textContent = STAGE;
+    $('adv-chapter').textContent = here.label;
+    $('adv-stage').textContent = here.name;
+    screen.dataset.biome = here.biome;
     $('adv-skip').hidden = !e.tutorial;
     say(e.tutorial ? TUTORIAL[0].say : e.taunt);
     fillBoard(e.tutorial ? TUTORIAL_BOARD : undefined);
     renderHealth();
     renderBoard(new Set(board.flat().map((t) => t.id)));
     host.boardDropped();
+    save();
+  }
+
+  /** Carry on the saved run: its battle, and the board and health as they were if it was under way. */
+  function resume(): boolean {
+    const run = loadRun();
+    const s = run?.stage ?? 0;
+    if (!run || !STAGES[s]?.enemies[run.battle]) return false;
+    const owned = loadArtifacts(); // read before startBattle saves over it
+    startBattle(s, run.battle, { hp: run.startHp, artifacts: run.startArtifacts });
+    const live = run.live;
+    if (!live) return true;
+    heroHp = live.heroHp;
+    enemyHp = live.enemyHp;
+    enemyTurns = live.enemyTurns;
+    board = live.board;
+    step = live.step;
+    refills = live.refills;
+    artifacts = owned;
+    armed = live.armed && artifacts.some((a) => a.id === live.armed && isReady(a)) ? live.armed : null;
+    factory.nextId = Math.max(factory.nextId, ...board.flat().map((t) => t.id + 1));
+    $('adv-skip').hidden = step < 0;
+    say(step >= 0 ? TUTORIAL[step].say : `Back for more? The ${enemy().name} is waiting.`);
+    renderHealth();
+    renderBoard(new Set(board.flat().map((t) => t.id)));
+    save();
+    return true;
   }
 
   $('adv-attack').addEventListener('click', () => void attack());
   $('adv-scramble').addEventListener('click', () => void scramble());
-  $('adv-skip').addEventListener('click', () => startBattle(battle + 1));
+  $('adv-skip').addEventListener('click', () => startBattle(stage, battle + 1, { hp: TUNING.hero.hp, artifacts }));
   $('adv-home').addEventListener('click', () => {
     screen.hidden = true;
     host.home();
@@ -566,11 +614,11 @@ export function createAdventure(host: AdventureHost) {
   });
 
   return {
-    /** Show the screen, starting at the tutorial. It sits under the home screen, so it can open as that fades. */
+    /** Show the screen, carrying on the saved run or starting at the tutorial. It sits under the home screen, so it can open as that fades. */
     open() {
       screen.hidden = false;
       $('adv-result').hidden = true;
-      startBattle(0);
+      if (!resume()) startBattle(0, 0);
     },
     isOpen: () => !screen.hidden,
   };

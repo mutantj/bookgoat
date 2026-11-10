@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { Tile } from '../engine/board';
 import { dict } from '../modes/mode';
-import { ENEMIES } from './enemies';
+import { STAGES } from './enemies';
 import { damageFor, makeBoard, refill, tilesFor, type Board } from './rules';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_REFILLS } from './tutorial';
 import { TUNING, gemForLength } from './tuning';
+import { chargeAfterWord, isReady, type OwnedArtifact } from './artifacts';
 
 let nextId = 1;
 const tile = (letter = 'X', kind: Tile['kind'] = 'normal'): Tile => ({ id: nextId++, letter, kind });
 const letters = (board: Board) => board.map((col) => col.map((t) => t.letter).join(''));
-const dummy = ENEMIES.find((e) => e.tutorial)!;
+const dummy = STAGES[0].enemies.find((e) => e.tutorial)!;
 
 describe('adventure board', () => {
   it('spells a word from tiles anywhere on the board, preferring gems', () => {
@@ -28,17 +29,42 @@ describe('adventure board', () => {
     expect(letters(board)).toEqual(['ZZAI', 'BFJN', 'ZGKO', 'DHLP']);
   });
 
-  it('multiplies letters by length, gems and the braid', () => {
+  it('multiplies letters by length, gems and an artifact', () => {
     const word = [tile('G', 'green'), tile('O'), tile('A'), tile('T')];
     const base = 4 * TUNING.lengthMultiplier[4];
-    expect(damageFor(word, dummy, false).total).toBe(Math.round(base * TUNING.gemMultiplier.green));
-    expect(damageFor(word, dummy, true).total).toBe(Math.round(base * TUNING.gemMultiplier.green * TUNING.powerUps.braid.multiplier));
+    const horn = TUNING.artifacts.goldenHorn.multiplier;
+    expect(damageFor(word, dummy).total).toBe(Math.round(base * TUNING.gemMultiplier.green));
+    const boosted = damageFor(word, dummy, { multiplier: horn, name: 'horn' });
+    expect(boosted.total).toBe(Math.round(base * TUNING.gemMultiplier.green * horn));
+    expect(boosted.math).toContain(`× ${horn} horn`);
   });
 
   it('lets enemy powers change the damage', () => {
-    const moss = ENEMIES.find((e) => e.name === 'Moss Troll')!;
+    const moss = STAGES[0].enemies.find((e) => e.name === 'Moss Troll')!;
     const cat = [tile('C'), tile('A'), tile('T')];
-    expect(damageFor(cat, moss, false).total).toBe(damageFor(cat, dummy, false).total - 1);
+    expect(damageFor(cat, moss).total).toBe(damageFor(cat, dummy).total - 1);
+  });
+});
+
+describe('the swamp', () => {
+  it('Mire Toad slime takes 2 off words without a gem', () => {
+    const toad = STAGES[1].enemies[0];
+    const plain = [tile('C'), tile('A'), tile('T'), tile('S')];
+    const gem = [tile('C', 'green'), tile('A'), tile('T'), tile('S')];
+    expect(damageFor(plain, toad).total).toBe(damageFor(plain, dummy).total - 2);
+    expect(damageFor(gem, toad).total).toBe(damageFor(gem, dummy).total);
+  });
+});
+
+describe('artifacts', () => {
+  it('long words charge an artifact until it is ready, and short words do nothing', () => {
+    const { rechargeLength, rechargeWords } = TUNING.artifacts.goldenHorn;
+    let owned: OwnedArtifact[] = [{ id: 'goldenHorn', charge: 0 }];
+    owned = chargeAfterWord(owned, rechargeLength - 1);
+    expect(owned[0].charge).toBe(0);
+    for (let i = 0; i < rechargeWords + 2; i++) owned = chargeAfterWord(owned, rechargeLength);
+    expect(owned[0].charge).toBe(rechargeWords);
+    expect(isReady(owned[0])).toBe(true);
   });
 });
 
