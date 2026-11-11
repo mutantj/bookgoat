@@ -601,12 +601,75 @@ export function createAdventure(host: AdventureHost) {
   $('adv-attack').addEventListener('click', () => void attack());
   $('adv-scramble').addEventListener('click', () => void scramble());
   $('adv-skip').addEventListener('click', () => startBattle(stage, battle + 1, { hp: TUNING.hero.hp, artifacts }));
-  $('adv-home').addEventListener('click', () => {
-    screen.hidden = true;
-    host.home();
-  });
+  /* ---------- Menu ---------- */
+
+  /** Fill the menu card: a title, a line of text and a column of buttons (the last one is the main button). */
+  function menuCard(title: string, text: string, actions: { label: string; run: () => void }[]) {
+    $('adv-menu-title').textContent = title;
+    $('adv-menu-text').textContent = text;
+    const box = $('adv-menu-actions');
+    box.innerHTML = '';
+    actions.forEach((a, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `btn ${i === actions.length - 1 ? 'btn-feed' : 'btn-quiet'}`;
+      b.textContent = a.label;
+      b.addEventListener('click', a.run);
+      box.appendChild(b);
+    });
+    $('adv-menu').hidden = false;
+    box.querySelector<HTMLElement>('.btn-feed')?.focus();
+  }
+  const closeMenu = () => ($('adv-menu').hidden = true);
+
+  /** The settings menu: restart this stage, start the whole adventure over, or go home. The run is already saved. */
+  function openMenu() {
+    if (busy) return; // let the attack finish first
+    const here = STAGES[stage];
+    const hp = here.startHp ?? TUNING.hero.hp;
+    menuCard('Menu', `${here.label}: ${here.name}`, [
+      {
+        label: 'Restart level',
+        run: () =>
+          menuCard('Restart level?', `Back to the first battle of ${here.name}, with ${hp}/${TUNING.hero.hp} health. You keep your artifacts.`, [
+            { label: 'Cancel', run: openMenu },
+            { label: 'Restart level', run: () => (closeMenu(), startBattle(stage, 0)) },
+          ]),
+      },
+      {
+        label: 'Restart game',
+        run: () =>
+          menuCard('Restart the whole game?', `Start again from the Tower Road tutorial. All progress is lost${artifacts.length ? ', and so are your artifacts' : ''}.`, [
+            { label: 'Cancel', run: openMenu },
+            {
+              label: 'Start over',
+              run: () => {
+                closeMenu();
+                artifacts = [];
+                saveArtifacts(artifacts);
+                saveRun(null);
+                startBattle(0, 0);
+              },
+            },
+          ]),
+      },
+      {
+        label: 'Go home',
+        run: () => {
+          closeMenu();
+          screen.hidden = true;
+          host.home();
+        },
+      },
+      { label: 'Keep playing', run: closeMenu },
+    ]);
+  }
+
+  $('adv-menu-open').addEventListener('click', openMenu);
   window.addEventListener('keydown', (e) => {
-    if (screen.hidden || !$('adv-result').hidden || busy) return;
+    if (screen.hidden || busy) return;
+    if (!$('adv-menu').hidden) return void (e.key === 'Escape' && closeMenu());
+    if (!$('adv-result').hidden) return;
     if (e.key === 'Enter') void attack();
     else if (e.key === 'Escape') {
       selection = [];
@@ -626,6 +689,7 @@ export function createAdventure(host: AdventureHost) {
     open() {
       screen.hidden = false;
       $('adv-result').hidden = true;
+      closeMenu();
       if (!resume()) startBattle(0, 0);
     },
     isOpen: () => !screen.hidden,

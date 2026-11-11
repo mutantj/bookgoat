@@ -124,12 +124,14 @@
     <div id="adventure" class="adventure" hidden>
       <header class="adv-top">
         <div class="adv-top-row">
-          <button id="adv-home" class="btn adv-home" type="button">Home</button>
           <div class="adv-title">
             <span id="adv-chapter" class="label"></span>
             <span id="adv-stage" class="adv-stage"></span>
           </div>
           <span id="adv-battle" class="adv-chip"></span>
+          <button id="adv-menu-open" class="btn adv-home" type="button" aria-label="Menu" title="Menu">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0-.5.4l-.4 2.7a7.3 7.3 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5a.5.5 0 0 0 .6.2l2.5-1a7.3 7.3 0 0 0 1.7 1l.4 2.7a.5.5 0 0 0 .5.4h4a.5.5 0 0 0 .5-.4l.4-2.7a7.3 7.3 0 0 0 1.7-1l2.5 1a.5.5 0 0 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+          </button>
         </div>
         <div class="adv-health">
           <div id="adv-hero-bar" class="adv-bar adv-bar-hero">
@@ -168,6 +170,14 @@
       <div class="adv-controls">
         <button id="adv-scramble" class="btn" type="button">Scramble</button>
         <button id="adv-attack" class="btn btn-feed" type="button" disabled>Attack!</button>
+      </div>
+
+      <div id="adv-menu" class="overlay" hidden>
+        <div class="card" role="dialog" aria-modal="true" aria-labelledby="adv-menu-title">
+          <h2 id="adv-menu-title"></h2>
+          <p id="adv-menu-text"></p>
+          <div id="adv-menu-actions" class="adv-menu-actions"></div>
+        </div>
       </div>
 
       <div id="adv-result" class="overlay" hidden>

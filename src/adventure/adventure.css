@@ -36,7 +36,7 @@
 }
 .adv-top-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto auto; /* stage name, battle chip, menu */
   align-items: center;
   gap: 10px;
 }
@@ -59,7 +59,15 @@
   transform: scaleX(-1);
 }
 .adv-home {
-  padding: 8px 12px;
+  display: grid;
+  place-items: center;
+  padding: 8px 10px;
+}
+/* The settings menu: one full-width button per choice. */
+.adv-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .adv-title {
   display: flex;

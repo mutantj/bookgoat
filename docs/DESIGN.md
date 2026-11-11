@@ -40,7 +40,7 @@ The same board and rules against a one-minute clock, after a 3-2-1 countdown. Se
 Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 
 **Screen layout, top to bottom:**
-- the top bar: Home, the stage label and name, the battle chip, and both health bars;
+- the top bar: the stage label and name, the battle chip, the menu (gear) button top right, and both health bars;
 - the arena: Rapunzel facing the enemy, with a speech bubble;
 - the word bar: the picked tiles, with the damage working underneath;
 - three artifact slots, the board, and an enemy notes panel (next hit and powers);
@@ -74,6 +74,8 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 - Rapunzel has 3 slots, which start as empty dashed holders. Artifacts are kept for good, across runs.
 - **Golden Troll Horn:** tap it before attacking and the next word does ×2 damage; tap again to cancel. It then needs 2 words of 6+ letters to recharge, shown as dots on its slot, and glows when ready.
 - The old consumable power-ups (apple, hay bale, braid) were removed in favour of artifacts.
+
+**Menu:** the gear button in the top bar opens a menu: **Restart level** (back to the first battle of the current stage, at its starting health, keeping artifacts), **Restart game** (back to the Tower Road tutorial, losing all progress and artifacts), **Go home** and **Keep playing**. Both restarts ask for confirmation.
 
 **Saving (`save.ts`):** the run is saved after every turn: the stage, battle, health, board, tutorial step and artifacts. Reopening Adventure carries on. Closing on a victory card resumes at the next battle, and closing after a loss resumes at the start of the lost battle.
 
