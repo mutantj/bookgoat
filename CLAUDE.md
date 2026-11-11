@@ -40,6 +40,7 @@ Run the type check, the tests and the build before saying a change is done.
 | `src/features.ts`, `vite.config.ts` | feature flags as build-time constants |
 | `server/` | the Cloudflare Worker + D1 leaderboard service; see `server/README.md` |
 | `art/`, `audio/export/` | SVGs (imported with `?raw`) and the `.wav` sounds |
+| `public/` | app icons (Rapunzel's face) and `manifest.webmanifest`; rebuild the icons with `node scripts/make-icons.mjs` after changing her drawing (the PNG step is in that script's comment) |
 
 Notes:
 - **Feature flags:** `__FEATURE_ADVENTURE__` is set from `VITE_FEATURE_ADVENTURE` (`off`, `false`, `0` or `no` turn it off; the default is on). `main.ts` loads Adventure with a dynamic `import()` only when the flag is on, so a build without it contains none of its code or CSS. Keep it that way: no static imports of `src/adventure/` from shared code.
