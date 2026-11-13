@@ -3,6 +3,7 @@
 // Board rules are in rules.ts, numbers in tuning.ts, enemies in enemies.ts, the tutorial in tutorial.ts, artifacts in
 // artifacts.ts. The run is saved after every turn (save.ts), so closing the game and coming back carries on.
 import './adventure.css';
+import gearSvg from '../../art/gear.svg?raw';
 import { TileFactory, type Pos, type Tile } from '../engine/board';
 import { Rng } from '../engine/rng';
 import type { GemKind } from '../engine/rules';
@@ -665,6 +666,7 @@ export function createAdventure(host: AdventureHost) {
     ]);
   }
 
+  $('adv-menu-open').innerHTML = inlineSvg(gearSvg);
   $('adv-menu-open').addEventListener('click', openMenu);
   window.addEventListener('keydown', (e) => {
     if (screen.hidden || busy) return;
