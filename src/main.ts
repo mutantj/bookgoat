@@ -10,12 +10,21 @@ import { createClassic } from './modes/classic';
 import { createBlitz } from './modes/blitz';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
 import welcomeJaw from '../audio/export/welcometobookgoat.jaw.json';
+import goodUrl from '../audio/export/good.wav';
+import goodJaw from '../audio/export/good.jaw.json';
+import prettyGoodUrl from '../audio/export/prettygood.wav';
+import prettyGoodJaw from '../audio/export/prettygood.jaw.json';
+import niceUrl from '../audio/export/nice.wav';
+import niceJaw from '../audio/export/nice.jaw.json';
+import excellentUrl from '../audio/export/excellent.wav';
+import excellentJaw from '../audio/export/excellent.jaw.json';
 import boardResetUrl from '../audio/export/boardreset.wav';
 import tileSelectUrl from '../audio/export/tileselect.wav';
 import wordPowerUrl from '../audio/export/word_power.wav';
 import gemSpawnUrl from '../audio/export/gemspawn.wav';
 import { loadEffect } from './ui/sound';
-import { lipSync } from './ui/voice';
+import { isSpeaking, lipSync, speak } from './ui/voice';
+import type { JawTrack } from './ui/jaw';
 import leaderboardIcon from '../art/leaderboard.svg?raw';
 import { FEATURES } from './features';
 
@@ -154,9 +163,32 @@ const playWordPower = loadEffect(wordPowerUrl);
 const WORD_PITCH = { semitonesPerLetter: 1, maxSemitones: 9 }; // each letter past 3 raises it a semitone, up to 12 letters
 let soundedWord = ''; // the valid word last announced, so redraws don't replay the sound
 
-/** Play the word-power sound when the selection turns into a valid word (a different one from last time), higher for longer words. */
+/** A praise line Rapunzel says out loud, with its jaw track. */
+function voiceLine(url: string, jaw: JawTrack) {
+  const audio = new Audio(url);
+  audio.preload = 'auto';
+  return { audio, jaw };
+}
+/** Long words get praise, picked from the first entry the word is long enough for (at random when there are two). */
+const PRAISE = [
+  { min: 8, lines: [voiceLine(excellentUrl, excellentJaw)] },
+  { min: 7, lines: [voiceLine(niceUrl, niceJaw)] },
+  { min: 6, lines: [voiceLine(goodUrl, goodJaw), voiceLine(prettyGoodUrl, prettyGoodJaw)] },
+];
+
+/**
+ * When the selection turns into a valid word (a different one from last time), play the word-power sound, higher for
+ * longer words, and have Rapunzel praise a long one. A line still playing is never cut off: the new one is skipped.
+ */
 function soundWord(valid: string) {
-  if (valid && valid !== soundedWord) playWordPower(Math.min((valid.length - 3) * WORD_PITCH.semitonesPerLetter, WORD_PITCH.maxSemitones));
+  if (valid && valid !== soundedWord) {
+    playWordPower(Math.min((valid.length - 3) * WORD_PITCH.semitonesPerLetter, WORD_PITCH.maxSemitones));
+    const praise = PRAISE.find((p) => valid.length >= p.min);
+    if (praise && !isSpeaking()) {
+      const line = pick(praise.lines);
+      speak($('adventure').hidden ? $('goat') : $('adv-goat'), line.audio, line.jaw);
+    }
+  }
   soundedWord = valid;
 }
 

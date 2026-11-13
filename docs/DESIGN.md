@@ -93,8 +93,11 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 | `word_power` | the selection becomes a valid word; pitched up a semitone per letter past 3 (up to +9) |
 | `gemspawn` | a gem appears; a semitone higher for each better gem |
 | `boardreset` | a new board drops in, and Scramble |
+| `good` / `prettygood` | Rapunzel's praise when the selection becomes a valid 6-letter word (one of the two at random) |
+| `nice` | praise for a valid 7-letter word |
+| `excellent` | praise for a valid 8+ letter word |
 
-Voice lines move Rapunzel's jaw with the sound. `npm run lipsync` (`scripts/make-lipsync.mjs`) reads each voice line's WAV and saves its jaw positions, 30 a second, as `audio/export/<name>.jaw.json`. `lipSync` in `src/ui/voice.ts` plays them back in time with the clip. Jaw tracks already exist for the unused voice lines `excellent`, `good`, `nice` and `prettygood`.
+Voice lines move Rapunzel's jaw with the sound. `npm run lipsync` (`scripts/make-lipsync.mjs`) reads each voice line's WAV and saves its jaw positions, 30 a second, as `audio/export/<name>.jaw.json`. `lipSync` in `src/ui/voice.ts` plays them back in time with the clip. The praise lines play in every mode, from whichever Rapunzel is on screen. A line that's still playing is never cut off: if the next long word comes too soon, its line is skipped. The word lengths are `PRAISE` in `src/main.ts`.
 
 ## Ideas not built yet
 
