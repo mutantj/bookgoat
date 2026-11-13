@@ -79,7 +79,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 
 **Saving (`save.ts`):** the run is saved after every turn: the stage, battle, health, board, tutorial step and artifacts. Reopening Adventure carries on. Closing on a victory card resumes at the next battle, and closing after a loss resumes at the start of the lost battle.
 
-**Art:** the enemy drawings are placeholders. Trolls share `art/troll.svg` and swamp enemies share `art/bogbeast.svg`, each tinted with a CSS hue.
+**Art:** the enemy drawings are placeholders. The Moss and Frost Trolls share `art/troll.svg` and swamp enemies share `art/bogbeast.svg`, each tinted with a CSS hue. The Ember Troll has its own drawing, `art/embertroll.svg`, with gold horns; the Golden Troll Horn (`art/goldenhorn.svg`) is one of them.
 
 ## Look and sound
 

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The Ember Troll, last troll on the Tower Road: the bramble troll in ember colours, with the golden horns Rapunzel wins from it. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 116">
+  <defs>
+    <linearGradient id="ember-horn-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff1a8"/>
+      <stop offset="0.5" stop-color="#f2b632"/>
+      <stop offset="1" stop-color="#b8790f"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="62" cy="110" rx="40" ry="5" fill="#000" opacity="0.25"/>
+  <path d="M36 32 L26 1 L50 24 Z" fill="url(#ember-horn-gold)" stroke="#7a4c06" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M31.5 17 l5 -1 M29 9 l4 -0.8" stroke="#7a4c06" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M88 32 L98 1 L74 24 Z" fill="url(#ember-horn-gold)" stroke="#7a4c06" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M92.5 17 l-5 -1 M95 9 l-4 -0.8" stroke="#7a4c06" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M62 18 C96 18 108 46 106 72 C104 96 88 106 62 106 C36 106 18 96 18 72 C16 46 28 18 62 18 Z" fill="#bd7d55" stroke="#664128" stroke-width="3"/>
+  <path d="M30 40 l-8 -4 M28 56 l-9 0 M100 46 l8 -4 M104 62 l8 1 M60 18 l-2 -8 M74 20 l4 -7" stroke="#664128" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="62" cy="80" rx="28" ry="20" fill="#e8a381" opacity="0.6"/>
+  <path d="M30 50 L50 56" stroke="#664128" stroke-width="4" stroke-linecap="round"/>
+  <path d="M60 56 L78 50" stroke="#664128" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="42" cy="64" r="8" fill="#fff8e0"/>
+  <circle cx="70" cy="64" r="8" fill="#fff8e0"/>
+  <circle cx="39" cy="65" r="3.5" fill="#1b1b1b"/>
+  <circle cx="67" cy="65" r="3.5" fill="#1b1b1b"/>
+  <path d="M34 84 Q52 96 74 84 Q54 90 34 84 Z" fill="#2b1a12" stroke="#2b1a12" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M40 85 l3 6 l3 -5 Z M64 85 l3 5 l3 -6 Z" fill="#fff8e0"/>
+</svg>

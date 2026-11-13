@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Golden Troll Horn, the Adventure artifact won from the Ember Troll on the Tower Road: one of its spiky gold horns.
+     Shown in an artifact slot and beside Rapunzel's name when it's switched on. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 0 40 48" aria-hidden="true">
+  <defs>
+    <linearGradient id="horn-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff1a8"/>
+      <stop offset="0.5" stop-color="#f2b632"/>
+      <stop offset="1" stop-color="#b8790f"/>
+    </linearGradient>
+  </defs>
+  <path d="M18 43 L12 4 L36 37 Z" fill="url(#horn-gold)" stroke="#7a4c06" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M16.2 31 l6 -1.2 M14.6 20.5 l5 -1 M13.2 11 l3.4 -0.7" stroke="#7a4c06" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M18 43 L36 37" stroke="#7a4c06" stroke-width="4" stroke-linecap="round"/>
+</svg>

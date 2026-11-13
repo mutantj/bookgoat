@@ -3,6 +3,7 @@
 import trollSvg from '../../art/troll.svg?raw';
 import dummySvg from '../../art/haydummy.svg?raw';
 import bogSvg from '../../art/bogbeast.svg?raw';
+import emberSvg from '../../art/embertroll.svg?raw';
 import type { ArtifactId } from './artifacts';
 
 /** What an enemy power sees about the word being played. */
@@ -94,8 +95,7 @@ const TOWER_ROAD: Enemy[] = [
     name: 'Ember Troll',
     hp: 38,
     hit: 5,
-    art: trollSvg,
-    hue: 280,
+    art: emberSvg, // its own colours and gold horns (the Golden Troll Horn comes from it), so no tint
     taunt: 'I eat goats for breakfast.',
     powers: [
       { name: 'Thick skin', text: 'Words under 5 letters do half damage.', damage: (d, w) => (w.length < 5 ? d / 2 : d) },
