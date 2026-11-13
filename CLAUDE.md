@@ -36,10 +36,10 @@ Run the type check, the tests and the build before saying a change is done.
 | `src/engine/` | Classic/Blitz rules with no UI: `board.ts` (staggered grid, refill), `game.ts` (turns, scoring, fire, gem blasts), `rules.ts` (all numbers), `dictionary.ts`, `rng.ts` |
 | `src/modes/` | `mode.ts` (the `GameMode` interface, the shared `dict`, `freshGame`), `classic.ts`, `blitz.ts` |
 | `src/adventure/` | Adventure, a separate mode with its own board rules: `adventure.ts` (screen), `rules.ts` (pick-any-tile board, damage), `tuning.ts` (numbers), `enemies.ts` (stages and enemies), `tutorial.ts`, `artifacts.ts`, `save.ts`, `adventure.css` |
-| `src/ui/` | `goat.ts` (Rapunzel's SVG and moods), `sound.ts` (Web Audio effects with pitch), `storage.ts` (Classic saves, scores, leaderboard queue), `leaderboard.ts` (online boards with an offline queue) |
+| `src/ui/` | `goat.ts` (Rapunzel's SVG and moods), `sound.ts` (Web Audio effects with pitch), `voice.ts` + `jaw.ts` (jaw lip sync for voice lines), `storage.ts` (Classic saves, scores, leaderboard queue), `leaderboard.ts` (online boards with an offline queue) |
 | `src/features.ts`, `vite.config.ts` | feature flags as build-time constants |
 | `server/` | the Cloudflare Worker + D1 leaderboard service; see `server/README.md` |
-| `art/`, `audio/export/` | SVGs (imported with `?raw`) and the `.wav` sounds |
+| `art/`, `audio/export/` | SVGs (imported with `?raw`) and the `.wav` sounds. A voice line also has a `<name>.jaw.json` jaw track: add it to `VOICE_LINES` in `scripts/make-lipsync.mjs`, run `npm run lipsync`, and play it through `lipSync` (`src/ui/voice.ts`) |
 | `public/` | app icons (Rapunzel's face) and `manifest.webmanifest`; rebuild the icons with `node scripts/make-icons.mjs` after changing her drawing (the PNG step is in that script's comment) |
 
 Notes:

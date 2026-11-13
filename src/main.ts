@@ -9,11 +9,13 @@ import type { EndReason, GameMode, ModeHost, ModeId } from './modes/mode';
 import { createClassic } from './modes/classic';
 import { createBlitz } from './modes/blitz';
 import welcomeUrl from '../audio/export/welcometobookgoat.wav';
+import welcomeJaw from '../audio/export/welcometobookgoat.jaw.json';
 import boardResetUrl from '../audio/export/boardreset.wav';
 import tileSelectUrl from '../audio/export/tileselect.wav';
 import wordPowerUrl from '../audio/export/word_power.wav';
 import gemSpawnUrl from '../audio/export/gemspawn.wav';
 import { loadEffect } from './ui/sound';
+import { lipSync } from './ui/voice';
 import leaderboardIcon from '../art/leaderboard.svg?raw';
 import { FEATURES } from './features';
 
@@ -804,10 +806,9 @@ let welcomeDone = false;
 let afterWelcome: (() => void) | null = null;
 function finishWelcome() {
   welcomeDone = true;
-  $('splash-goat').classList.remove('talk');
   afterWelcome?.();
 }
-welcome.addEventListener('playing', () => $('splash-goat').classList.add('talk'));
+lipSync($('splash-goat'), welcome, welcomeJaw); // her jaw follows the greeting's loudness
 welcome.addEventListener('ended', finishWelcome);
 welcome.addEventListener('error', finishWelcome);
 

@@ -88,11 +88,13 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 
 | Sound | When it plays |
 |---|---|
-| `welcometobookgoat` | the greeting on the home screen |
+| `welcometobookgoat` | the greeting on the home screen; her jaw follows its loudness |
 | `tileselect` | picking a tile |
 | `word_power` | the selection becomes a valid word; pitched up a semitone per letter past 3 (up to +9) |
 | `gemspawn` | a gem appears; a semitone higher for each better gem |
 | `boardreset` | a new board drops in, and Scramble |
+
+Voice lines move Rapunzel's jaw with the sound. `npm run lipsync` (`scripts/make-lipsync.mjs`) reads each voice line's WAV and saves its jaw positions, 30 a second, as `audio/export/<name>.jaw.json`. `lipSync` in `src/ui/voice.ts` plays them back in time with the clip. Jaw tracks already exist for the unused voice lines `excellent`, `good`, `nice` and `prettygood`.
 
 ## Ideas not built yet
 

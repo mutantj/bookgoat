@@ -777,6 +777,16 @@ body {
 .goat.talk .jaw {
   animation: chew 160ms ease-in-out infinite alternate;
 }
+/* A voice line with a jaw track (src/ui/voice.ts) sets --jaw from 0 to 1 as it plays; at 1 she's as wide open as when tiles fly in. */
+.goat.speaking .jaw {
+  animation: none;
+  transition: transform 40ms linear;
+  transform: translateY(calc(var(--jaw, 0) * 6px)) rotate(calc(var(--jaw, 0) * -2deg));
+}
+.goat.speaking .mouth {
+  transition: transform 40ms linear;
+  transform: scaleY(var(--jaw, 0));
+}
 @keyframes chew {
   to { transform: translateY(4px) rotate(-3deg); }
 }
