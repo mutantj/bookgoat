@@ -126,12 +126,9 @@ export function createAdventure(host: AdventureHost) {
   }
 
   /** May the player use this right now? The tutorial allows only the step's action. */
-  function allowed(action: 'word' | 'scramble' | 'artifact'): boolean {
+  function allowed(action: 'word' | 'artifact'): boolean {
     if (busy) return false;
-    const s = tutorialStep();
-    if (!s) return true;
-    if (s.action === 'word') return action === 'word' || (action === 'scramble' && !s.word); // a way out of a stuck board
-    return action === 'scramble';
+    return !tutorialStep() || action === 'word';
   }
 
   function renderSelection() {
@@ -177,9 +174,6 @@ export function createAdventure(host: AdventureHost) {
     } else if (w.length && w.length < TUNING.minWordLength) dmgEl.textContent = `${TUNING.minWordLength}+ letters`;
     else dmgEl.textContent = w ? 'Not a word' : 'Tap letters to spell a word';
     $<HTMLButtonElement>('adv-attack').disabled = !allowed('word') || !isWord() || (!!wanted && w !== wanted);
-    const scramble = $<HTMLButtonElement>('adv-scramble');
-    scramble.disabled = !allowed('scramble');
-    scramble.classList.toggle('hint', s?.action === 'scramble');
     renderPowers();
   }
 
@@ -425,7 +419,7 @@ export function createAdventure(host: AdventureHost) {
 
   /** Lock the buttons while the attack plays out, keeping the word in view. */
   function busyRender() {
-    for (const id of ['adv-attack', 'adv-scramble']) $<HTMLButtonElement>(id).disabled = true;
+    $<HTMLButtonElement>('adv-attack').disabled = true;
     renderPowers();
   }
 
@@ -445,20 +439,6 @@ export function createAdventure(host: AdventureHost) {
     await wait(400);
     busy = false;
     renderSelection();
-  }
-
-  async function scramble() {
-    if (!allowed('scramble')) return;
-    busy = true;
-    selection = [];
-    fillBoard();
-    renderBoard(new Set(board.flat().map((t) => t.id)));
-    host.boardDropped();
-    say(`New letters, but the ${enemy().name} gets a free hit.`);
-    await wait(500);
-    await enemyTurn();
-    if (tutorialStep()?.action === 'scramble') advance();
-    if (heroHp > 0) save();
   }
 
   function showResult(title: string, text: string, action: string, then: () => void) {
@@ -586,7 +566,7 @@ export function createAdventure(host: AdventureHost) {
     enemyHp = live.enemyHp;
     enemyTurns = live.enemyTurns;
     board = live.board;
-    step = live.step;
+    step = live.step < TUTORIAL.length ? live.step : -1; // saves from when the tutorial had a Scramble step
     refills = live.refills;
     artifacts = owned;
     armed = live.armed && artifacts.some((a) => a.id === live.armed && isReady(a)) ? live.armed : null;
@@ -600,7 +580,6 @@ export function createAdventure(host: AdventureHost) {
   }
 
   $('adv-attack').addEventListener('click', () => void attack());
-  $('adv-scramble').addEventListener('click', () => void scramble());
   $('adv-skip').addEventListener('click', () => startBattle(stage, battle + 1, { hp: TUNING.hero.hp, artifacts }));
   /* ---------- Menu ---------- */
 

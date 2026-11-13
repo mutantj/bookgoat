@@ -43,8 +43,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 - the top bar: the stage label and name, the battle chip, the menu (gear) button top right, and both health bars;
 - the arena: Rapunzel facing the enemy, with a speech bubble;
 - the word bar: the picked tiles, with the damage working underneath;
-- three artifact slots, the board, and an enemy notes panel (next hit and powers);
-- Scramble and Attack!
+- three artifact slots, the board with **Attack!** centred under it, and an enemy notes panel (next hit and powers). The slots and the notes run the full height, down past the board.
 
 **The board is not like Classic's:**
 - Tap tiles **anywhere**, in any order; they don't have to touch. Each tapped tile moves up into the word bar and leaves an empty slot.
@@ -53,7 +52,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 
 **Battle:**
 - Every word is an attack. Damage is letter values × a length multiplier × gem multipliers × any artifact boost, and then the enemy's powers change it. The enemy hits back after every word.
-- **Scramble** gives all new letters, but the enemy gets a free hit.
+- There's no Scramble in Adventure. New tiles lean toward vowels, so the board should always have a word.
 - A word of 5+ letters leaves a gem in the refill.
 - **Overkill:** damage past an enemy's last point of health heals Rapunzel, up to full health (`overkillHeal` in tuning). A glowing "+N" arcs from the enemy into her. This is the only healing.
 - Health carries from one battle to the next within a stage. Losing restarts that battle with the health and artifacts she had when it began.
@@ -65,7 +64,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 | The Tower Road | Tutorial | 30/30 | Hay Dummy (30), Moss Troll (24), Frost Troll (30), Ember Troll (38) | wins the Golden Troll Horn |
 | The Murky Swamp | Chapter 1 | 10/30 | Mire Toad (40), Bog Lurker (52), Swamp Hag (66) | no reward yet; Play again restarts the swamp |
 
-- **Tutorial:** the Hay Dummy is a scripted lesson (`tutorial.ts`) with a fixed board and fixed refills: spell CAT, HORSE, then GOAT using the gem, then Scramble, then any word. The dummy can't drop below 1 health until the steps are done. **Skip tutorial** jumps to the first troll.
+- **Tutorial:** the Hay Dummy is a scripted lesson (`tutorial.ts`) with a fixed board and fixed refills: spell CAT, HORSE, then GOAT using the gem, then any word. The dummy can't drop below 1 health until the steps are done. **Skip tutorial** jumps to the first troll.
 - Each enemy has powers that change damage or hits, e.g. "words with an S do 2 less damage" or "every third hit does double". The powers are listed in the notes panel.
 - A power can **mark** the letters it affects (`marks` on the power), shown on the board and in the word bar. A **hex** is light red with a small ✶ (the Swamp Hag hexes E). **Frost** is icy teal with a ❄ (the Frost Troll freezes S); its teal is kept clear of the sapphire and diamond gem blues.
 - Each stage has its own scenery (`data-biome` on the screen: `mountain` or `swamp`).
@@ -92,7 +91,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 | `tileselect` | picking a tile |
 | `word_power` | the selection becomes a valid word; pitched up a semitone per letter past 3 (up to +9) |
 | `gemspawn` | a gem appears; a semitone higher for each better gem |
-| `boardreset` | a new board drops in, and Scramble |
+| `boardreset` | a new board drops in, and Scramble (Classic and Blitz) |
 | `good` / `prettygood` | Rapunzel's praise when the selection becomes a valid 6-letter word (one of the two at random) |
 | `nice` | praise for a valid 7-letter word |
 | `excellent` | praise for a valid 8+ letter word |

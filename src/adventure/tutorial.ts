@@ -10,16 +10,13 @@ export const TUTORIAL_BOARD = ['CATE', 'HORL', 'INSE', 'DAMP'];
  */
 export const TUTORIAL_REFILLS = ['A', 'O', 'R', 'T', 'S', 'U', 'G*', 'E'];
 
-export type TutorialStep =
-  /** Spell a word. With `word`, only that word is accepted and it's highlighted on the board. */
-  | { say: string; action: 'word'; word?: string }
-  | { say: string; action: 'scramble' };
+/** Spell a word. With `word`, only that word is accepted and it's highlighted on the board. */
+export type TutorialStep = { say: string; action: 'word'; word?: string };
 
 export const TUTORIAL: TutorialStep[] = [
   { action: 'word', word: 'cat', say: "Let's practise on this hay dummy! Tap letters anywhere to spell CAT, then press Attack." },
   { action: 'word', word: 'horse', say: 'Ouch! It hits back after every word. Longer words hit much harder: spell HORSE.' },
   { action: 'word', word: 'goat', say: 'Long words leave a gem tile, and gems add bonus damage. Spell GOAT using the gem.' },
-  { action: 'scramble', say: 'Stuck for words? Scramble gives all new letters, but the enemy gets a free hit. Try it.' },
   { action: 'word', say: 'Now attack with any word you like.' },
 ];
 

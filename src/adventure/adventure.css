@@ -369,11 +369,23 @@
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
   cursor: default;
 }
-/* Power-ups | board | enemy notes */
+/* Artifacts | board with Attack! under it | enemy notes. The side panels run the full height, down past the board. */
 .adv-play {
   display: grid;
   grid-template-columns: 52px auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   gap: 8px;
+}
+.adv-powers {
+  grid-row: 1 / 3;
+}
+.adv-info {
+  grid-column: 3;
+  grid-row: 1 / 3;
+}
+.adv-attack {
+  grid-column: 2;
+  font-size: 1.05rem;
 }
 .adv-powers {
   display: flex;
@@ -516,14 +528,6 @@
 }
 @keyframes adv-drop {
   from { transform: translateY(-40%); opacity: 0; }
-}
-.adv-controls {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px;
-}
-.adv-controls .btn-feed {
-  font-size: 1.05rem;
 }
 
 /* ---------- Tutorial and status ---------- */
