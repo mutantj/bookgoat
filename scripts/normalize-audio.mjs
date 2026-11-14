@@ -15,6 +15,9 @@ const CEILING_DB = -1;
 /** The most the limiter may squash a sound's peaks, so sharp sounds like the tile click keep their snap. */
 const MAX_LIMIT_DB = 6;
 
+/** Sounds played at the volume they were exported at, left out of the evening-out. */
+const KEEP_AS_EXPORTED = ['tileselect.wav'];
+
 const DIR = 'audio/export';
 const DONE_FILE = `${DIR}/normalized.json`;
 
@@ -36,6 +39,11 @@ function render(src, gain, dest) {
 const done = fs.existsSync(DONE_FILE) ? JSON.parse(fs.readFileSync(DONE_FILE, 'utf8')) : {};
 for (const name of fs.readdirSync(DIR).filter((f) => f.endsWith('.wav')).sort()) {
   const file = `${DIR}/${name}`;
+  if (KEEP_AS_EXPORTED.includes(name)) {
+    delete done[name];
+    console.log(`${name.padEnd(26)} kept as exported`);
+    continue;
+  }
   if (done[name] === fingerprint(file)) {
     console.log(`${name.padEnd(26)} already done`);
     continue;
