@@ -96,6 +96,8 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 | `nice` | praise for a valid 7-letter word |
 | `excellent` | praise for a valid 8+ letter word |
 
+All sounds are evened out to the same loudness (−18 LUFS) by `npm run normalize-audio` (`scripts/normalize-audio.mjs`, using ffmpeg). A limiter trims up to 6 dB off sharp peaks, so very spiky sounds (the tile click, "excellent") end up a little quieter than the rest. Finished files are fingerprinted in `audio/export/normalized.json`, so reruns only touch new exports.
+
 Voice lines move Rapunzel's jaw with the sound. `npm run lipsync` (`scripts/make-lipsync.mjs`) reads each voice line's WAV and saves its jaw positions, 30 a second, as `audio/export/<name>.jaw.json`. `lipSync` in `src/ui/voice.ts` plays them back in time with the clip. The praise lines play in every mode, from whichever Rapunzel is on screen. A line that's still playing is never cut off: if the next long word comes too soon, its line is skipped. The word lengths are `PRAISE` in `src/main.ts`.
 
 ## Ideas not built yet

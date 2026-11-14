@@ -39,7 +39,7 @@ Run the type check, the tests and the build before saying a change is done.
 | `src/ui/` | `goat.ts` (Rapunzel's SVG and moods), `sound.ts` (Web Audio effects with pitch), `voice.ts` + `jaw.ts` (jaw lip sync for voice lines), `storage.ts` (Classic saves, scores, leaderboard queue), `leaderboard.ts` (online boards with an offline queue) |
 | `src/features.ts`, `vite.config.ts` | feature flags as build-time constants |
 | `server/` | the Cloudflare Worker + D1 leaderboard service; see `server/README.md` |
-| `art/`, `audio/export/` | SVGs (imported with `?raw`) and the `.wav` sounds. A voice line also has a `<name>.jaw.json` jaw track: add it to `VOICE_LINES` in `scripts/make-lipsync.mjs`, run `npm run lipsync`, and play it through `lipSync` (`src/ui/voice.ts`) |
+| `art/`, `audio/export/` | SVGs (imported with `?raw`) and the `.wav` sounds. After exporting a sound, run `npm run normalize-audio` (needs ffmpeg) to bring it to the same loudness as the rest. A voice line also has a `<name>.jaw.json` jaw track: add it to `VOICE_LINES` in `scripts/make-lipsync.mjs`, run `npm run lipsync` (after normalizing), and play it through `lipSync` (`src/ui/voice.ts`) |
 | `public/` | app icons (Rapunzel's face) and `manifest.webmanifest`; rebuild the icons with `node scripts/make-icons.mjs` after changing her drawing (the PNG step is in that script's comment) |
 
 Notes:
