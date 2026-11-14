@@ -11,6 +11,8 @@ export interface RunSave {
   stage?: number;
   battle: number;
   startHp: number;
+  /** Health when the stage began, for Restart chapter (missing in older saves). */
+  chapterHp?: number;
   startArtifacts: OwnedArtifact[];
   /** The battle as it stands, if it's under way. Without it, the battle starts fresh. */
   live?: {
@@ -20,8 +22,8 @@ export interface RunSave {
     board: Board;
     step: number;
     refills: string[];
-    /** The artifact switched on for the next word. */
-    armed: ArtifactId | null;
+    /** The artifacts switched on (older saves kept one, or null). */
+    armed: ArtifactId[] | ArtifactId | null;
   };
 }
 

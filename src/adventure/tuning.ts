@@ -27,10 +27,15 @@ export const TUNING = {
 
   /** How many artifacts Rapunzel can carry. Empty slots show beside the board. */
   artifactSlots: 3,
+  /** `charge: 'words'` recharges during a fight from long words; `charge: 'battle'` is full at the start of every battle. */
   artifacts: {
-    /** Golden Troll Horn, won by clearing the Tower Road: tap it and the next word does this many times the damage.
+    /** Golden Troll Horn, won on the Tower Road: tap it and the next word does `multiplier` times the damage.
      * Then it needs `rechargeWords` words of at least `rechargeLength` letters before it can be used again. */
-    goldenHorn: { multiplier: 2, rechargeLength: 6, rechargeWords: 2 },
+    goldenHorn: { charge: 'words', multiplier: 2, rechargeLength: 6, rechargeWords: 2 },
+    /** Swamp Shield, won in the Murky Swamp: tap it and the enemy's next hit does `block` less damage. Once a battle. */
+    shield: { charge: 'battle', block: 5 },
+    /** Stone Hammer, won on the Stone Pass: tap it, then a tile, to smash that tile and drop a new one. Once a battle. */
+    hammer: { charge: 'battle' },
   },
 };
 

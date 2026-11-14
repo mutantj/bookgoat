@@ -4,6 +4,7 @@ import trollSvg from '../../art/troll.svg?raw';
 import dummySvg from '../../art/haydummy.svg?raw';
 import bogSvg from '../../art/bogbeast.svg?raw';
 import emberSvg from '../../art/embertroll.svg?raw';
+import stoneSvg from '../../art/stonefolk.svg?raw';
 import type { ArtifactId } from './artifacts';
 
 /** What an enemy power sees about the word being played. */
@@ -53,9 +54,11 @@ export interface Stage {
   /** Shown above the name in the top bar. */
   label: string;
   /** Sets the arena's scenery (see adventure.css). */
-  biome: 'mountain' | 'swamp';
+  biome: 'mountain' | 'swamp' | 'peaks';
   /** Rapunzel's health at the start of the stage, if not full. Health carries from one battle to the next. */
   startHp?: number;
+  /** Arrive with the health the previous stage left her, instead of `startHp`. */
+  carryHp?: boolean;
   /** The artifact won by clearing the stage. */
   reward?: ArtifactId;
   enemies: Enemy[];
@@ -139,7 +142,43 @@ const SWAMP: Enemy[] = [
   },
 ];
 
+const STONE_PASS: Enemy[] = [
+  {
+    name: 'Pebble Golem',
+    hp: 50,
+    hit: 5,
+    art: stoneSvg,
+    taunt: 'The path climbs into the cold mountains, and the rocks begin to move…',
+    powers: [{ name: 'Hard shell', text: 'Words under 5 letters do 2 less damage.', damage: (d, w) => (w.length < 5 ? d - 2 : d) }],
+  },
+  {
+    name: 'Boulder Brute',
+    hp: 62,
+    hit: 6,
+    art: stoneSvg,
+    hue: 30,
+    taunt: 'CRUSH. GOAT.',
+    powers: [
+      { name: 'Grit', text: 'Words with a hexed A do 3 less damage.', marks: { letters: ['A'], style: 'hex' }, damage: (d, w) => (w.word.includes('a') ? d - 3 : d) },
+      { name: 'Heavy fists', text: 'Every third hit does double damage.', hit: (h, i) => (i.turn % 3 === 0 ? h * 2 : h) },
+    ],
+  },
+  {
+    name: 'Stone Giant',
+    hp: 80,
+    hit: 6,
+    art: stoneSvg,
+    hue: 200,
+    taunt: 'Little goat. The mountain does not move for you.',
+    powers: [
+      { name: 'Petrify', text: 'Words with a hexed O do 3 less damage.', marks: { letters: ['O'], style: 'hex' }, damage: (d, w) => (w.word.includes('o') ? d - 3 : d) },
+      { name: 'Avalanche', text: 'Hits 1 harder every turn.', hit: (h, i) => h + i.turn - 1 },
+    ],
+  },
+];
+
 export const STAGES: Stage[] = [
   { name: 'The Tower Road', label: 'Tutorial', biome: 'mountain', reward: 'goldenHorn', enemies: TOWER_ROAD },
-  { name: 'The Murky Swamp', label: 'Chapter 1', biome: 'swamp', startHp: 10, enemies: SWAMP },
+  { name: 'The Murky Swamp', label: 'Chapter 1', biome: 'swamp', startHp: 10, reward: 'shield', enemies: SWAMP },
+  { name: 'The Stone Pass', label: 'Chapter 2', biome: 'peaks', carryHp: true, reward: 'hammer', enemies: STONE_PASS },
 ];

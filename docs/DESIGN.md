@@ -62,23 +62,28 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 | Stage | Label | Rapunzel starts at | Enemies (health) | Clearing it |
 |---|---|---|---|---|
 | The Tower Road | Tutorial | 30/30 | Hay Dummy (30), Moss Troll (24), Frost Troll (30), Ember Troll (38) | wins the Golden Troll Horn |
-| The Murky Swamp | Chapter 1 | 10/30 | Mire Toad (40), Bog Lurker (52), Swamp Hag (66) | no reward yet; Play again restarts the swamp |
+| The Murky Swamp | Chapter 1 | 10/30 | Mire Toad (40), Bog Lurker (52), Swamp Hag (66) | wins the Swamp Shield |
+| The Stone Pass | Chapter 2 | whatever the swamp left her | Pebble Golem (50), Boulder Brute (62), Stone Giant (80) | wins the Stone Hammer; Play again replays the pass at full health |
 
 - **Tutorial:** the Hay Dummy is a scripted lesson (`tutorial.ts`) with a fixed board and fixed refills: spell CAT, HORSE, then GOAT using the gem, then any word. The dummy can't drop below 1 health until the steps are done. **Skip tutorial** jumps to the first troll.
 - Each enemy has powers that change damage or hits, e.g. "words with an S do 2 less damage" or "every third hit does double". The powers are listed in the notes panel.
 - A power can **mark** the letters it affects (`marks` on the power), shown on the board and in the word bar. A **hex** is light red with a small ✶ (the Swamp Hag hexes E). **Frost** is icy teal with a ❄ (the Frost Troll freezes S); its teal is kept clear of the sapphire and diamond gem blues. A gem is never placed on a marked letter.
-- Each stage has its own scenery (`data-biome` on the screen: `mountain` or `swamp`).
+- Each stage has its own scenery (`data-biome` on the screen: `mountain`, `swamp` or `peaks`). A stage with `carryHp` starts Rapunzel with the health she ended the previous stage on.
+- Clearing a stage that awards an artifact shows the cleared card, then an **Artifact discovered!** card: the artifact drawn large, its name, its power and how it charges.
 
 **Artifacts (`artifacts.ts`, numbers in `tuning.ts`):**
 - Rapunzel has 3 slots, which start as empty dashed holders. Artifacts are kept for good, across runs.
-- **Golden Troll Horn:** tap it before attacking and the next word does ×2 damage; tap again to cancel. It then needs 2 words of 6+ letters to recharge, shown as dots on its slot, and glows when ready.
+- Tap a charged artifact to switch it on; tap it again to put it away unused. Charge shows as dots on the slot, and a charged artifact glows. Switched-on artifacts show beside Rapunzel's name.
+- **Golden Troll Horn** (Tower Road): the next word does ×2 damage. Recharges after 2 words of 6+ letters.
+- **Swamp Shield** (Murky Swamp): the enemy's next hit does 5 less damage. Charged at the start of every battle.
+- **Stone Hammer** (Stone Pass): tap it, then a tile, and the tile breaks; its column drops and a new tile falls in. It doesn't use a turn and won't break gems. Charged at the start of every battle.
 - The old consumable power-ups (apple, hay bale, braid) were removed in favour of artifacts.
 
-**Menu:** the gear button in the top bar opens a menu: **Restart chapter** (back to the first battle of the current stage, at its starting health, keeping artifacts), **Restart game** (back to the Tower Road tutorial, losing all progress and artifacts), **Go home** and **Keep playing**. Both restarts ask for confirmation.
+**Menu:** the gear button in the top bar opens a menu: **Restart chapter** (back to the first battle of the current stage, with the health she arrived with, keeping artifacts), **Restart game** (back to the Tower Road tutorial, losing all progress and artifacts), **Go home** and **Keep playing**. Both restarts ask for confirmation.
 
 **Saving (`save.ts`):** the run is saved after every turn: the stage, battle, health, board, tutorial step and artifacts. Reopening Adventure carries on. Closing on a victory card resumes at the next battle, and closing after a loss resumes at the start of the lost battle.
 
-**Art:** the enemy drawings are placeholders. The Moss and Frost Trolls share `art/troll.svg` and swamp enemies share `art/bogbeast.svg`, each tinted with a CSS hue. The Ember Troll has its own drawing, `art/embertroll.svg`, with gold horns; the Golden Troll Horn (`art/goldenhorn.svg`) is one of them.
+**Art:** the enemy drawings are placeholders. The Moss and Frost Trolls share `art/troll.svg` and swamp enemies share `art/bogbeast.svg` and the stone people share `art/stonefolk.svg`, each tinted with a CSS hue. The Ember Troll has its own drawing, `art/embertroll.svg`, with gold horns; the Golden Troll Horn (`art/goldenhorn.svg`) is one of them. The other artifacts are `art/shield.svg` and `art/hammer.svg`.
 
 ## Look and sound
 
@@ -102,6 +107,6 @@ Voice lines move Rapunzel's jaw with the sound. `npm run lipsync` (`scripts/make
 
 ## Ideas not built yet
 
-- Real enemy art, and more artifacts and stages. The second-stage reward is still to be decided.
+- Real enemy art (the stone people especially look alike: grey doesn't tint well), and more stages after the Stone Pass.
 - Server-side score checking, and daily boards (scores are already stored per board id, so a daily board is just a new id).
 - Whether "Play again" after the Tower Road should skip the dummy once the horn is owned.

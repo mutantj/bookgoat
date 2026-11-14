@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder mountain enemy: a lumpy stone creature facing left, with a mossy brow and glowing eyes. Each enemy tints it with a CSS hue. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 116">
+  <ellipse cx="62" cy="110" rx="42" ry="5" fill="#000" opacity="0.25"/>
+  <path d="M22 104 L18 70 L28 40 L46 24 L70 20 L92 30 L104 52 L106 80 L100 104 Z" fill="#8f9aa8" stroke="#46505c" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M28 40 L46 24 L70 20 L92 30 L86 38 L64 32 L44 36 Z" fill="#6f8f5a" stroke="#3f5a33" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M30 78 L44 74 M76 88 L92 84 M84 60 L98 64 M36 96 L52 98" stroke="#5e6976" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M54 70 L62 60 L58 50" stroke="#5e6976" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M28 52 L50 48" stroke="#3a434d" stroke-width="5" stroke-linecap="round"/>
+  <path d="M60 48 L80 52" stroke="#3a434d" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="40" cy="60" rx="8" ry="6" fill="#ffd36b"/>
+  <ellipse cx="70" cy="60" rx="8" ry="6" fill="#ffd36b"/>
+  <circle cx="37" cy="61" r="3" fill="#2a2018"/>
+  <circle cx="67" cy="61" r="3" fill="#2a2018"/>
+  <path d="M36 84 L44 80 L52 84 L60 80 L68 84 L76 80" stroke="#2f363e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

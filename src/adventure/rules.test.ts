@@ -5,7 +5,7 @@ import { STAGES } from './enemies';
 import { damageFor, gemTile, makeBoard, refill, tilesFor, type Board } from './rules';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_REFILLS } from './tutorial';
 import { TUNING, gemForLength } from './tuning';
-import { chargeAfterWord, isReady, type OwnedArtifact } from './artifacts';
+import { ARTIFACTS, chargeAfterWord, chargeForBattle, isReady, shieldBlock, type OwnedArtifact } from './artifacts';
 
 let nextId = 1;
 const tile = (letter = 'X', kind: Tile['kind'] = 'normal'): Tile => ({ id: nextId++, letter, kind });
@@ -81,6 +81,40 @@ describe('artifacts', () => {
     for (let i = 0; i < rechargeWords + 2; i++) owned = chargeAfterWord(owned, rechargeLength);
     expect(owned[0].charge).toBe(rechargeWords);
     expect(isReady(owned[0])).toBe(true);
+  });
+});
+
+describe('shield and hammer', () => {
+  it('long words never charge the once-a-battle artifacts', () => {
+    const owned: OwnedArtifact[] = [{ id: 'shield', charge: 0 }, { id: 'hammer', charge: 0 }];
+    expect(chargeAfterWord(owned, 9)).toEqual(owned);
+  });
+  it('a new battle refills the shield and hammer but leaves the horn alone', () => {
+    const owned: OwnedArtifact[] = [{ id: 'goldenHorn', charge: 0 }, { id: 'shield', charge: 0 }, { id: 'hammer', charge: 0 }];
+    const refilled = chargeForBattle(owned);
+    expect(refilled[0].charge).toBe(0);
+    expect(isReady(refilled[1]) && isReady(refilled[2])).toBe(true);
+  });
+  it('the shield stops up to its block, never more than the hit', () => {
+    const block = TUNING.artifacts.shield.block;
+    expect(shieldBlock(block + 3)).toBe(block);
+    expect(shieldBlock(2)).toBe(2);
+  });
+  it('every artifact says what it does and how it charges', () => {
+    for (const info of Object.values(ARTIFACTS)) {
+      expect(info.power().length).toBeGreaterThan(10);
+      expect(info.charging().length).toBeGreaterThan(10);
+    }
+  });
+});
+
+describe('stages', () => {
+  it('the Tower Road gives the horn, the swamp the shield and the Stone Pass the hammer', () => {
+    expect(STAGES.map((st) => st.reward)).toEqual(['goldenHorn', 'shield', 'hammer']);
+  });
+  it('Rapunzel arrives at the Stone Pass with the health the swamp left her', () => {
+    expect(STAGES[2].carryHp).toBe(true);
+    expect(STAGES[2].enemies).toHaveLength(3);
   });
 });
 

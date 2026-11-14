@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Swamp Shield, the Adventure artifact won in the Murky Swamp: a round shield of woven reeds with a lily-pad boss.
+     Shown in an artifact slot and beside Rapunzel's name while it's raised. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" aria-hidden="true">
+  <circle cx="24" cy="24" r="20" fill="#7a9a4a" stroke="#3b4f1e" stroke-width="2.4"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#c9b26a" stroke-width="2.2"/>
+  <path d="M10 18 Q24 12 38 18 M8 25 Q24 19 40 25 M10 32 Q24 26 38 32" stroke="#5a7434" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <circle cx="24" cy="24" r="6.5" fill="#4f9a50" stroke="#24502a" stroke-width="1.8"/>
+  <path d="M24 24 L29.5 21" stroke="#24502a" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="21" cy="21.5" r="1.8" fill="#f6b7d2" stroke="#b5527d" stroke-width="0.8"/>
+</svg>

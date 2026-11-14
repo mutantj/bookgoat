@@ -13,7 +13,7 @@ import { STAGES, type Enemy } from './enemies';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_DONE, TUTORIAL_REFILLS, type TutorialStep } from './tutorial';
 import { SIZE, damageFor, gemTile, makeBoard, num, refill, tilesFor, type Board } from './rules';
 import { TUNING, gemForLength } from './tuning';
-import { ARTIFACTS, chargeAfterWord, fullCharge, isReady, type ArtifactId, type OwnedArtifact } from './artifacts';
+import { ARTIFACTS, chargeAfterWord, chargeForBattle, describe, fullCharge, isReady, shieldBlock, spec, type ArtifactId, type OwnedArtifact } from './artifacts';
 import { loadArtifacts, loadRun, saveArtifacts, saveRun } from './save';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -51,8 +51,10 @@ export function createAdventure(host: AdventureHost) {
   /** Artifacts Rapunzel owns, kept between runs, and how they stood when this battle began (for a retry). */
   let artifacts: OwnedArtifact[] = loadArtifacts();
   let startArtifacts: OwnedArtifact[] = artifacts;
-  /** The artifact triggered for the next word, if any. */
-  let armed: ArtifactId | null = null;
+  /** Artifacts switched on: the horn waits for the next word, the shield for the next hit, the hammer for a tile tap. */
+  let armed: ArtifactId[] = [];
+  /** Rapunzel's health when this stage began, for Restart chapter. */
+  let chapterHp: number = TUNING.hero.hp;
   /** Index into TUTORIAL while the tutorial is running, otherwise -1. */
   let step = -1;
   let refills: string[] = [];
@@ -82,7 +84,7 @@ export function createAdventure(host: AdventureHost) {
   const word = () => wordOf(selection);
   const isWord = () => word().length >= TUNING.minWordLength && dict.has(word());
 
-  const boost = () => (armed ? { multiplier: TUNING.artifacts[armed].multiplier, name: 'horn' } : undefined);
+  const boost = () => (armed.includes('goldenHorn') ? { multiplier: spec('goldenHorn').multiplier ?? 1, name: 'horn' } : undefined);
   const damage = (path = selection) => damageFor(path.map(at), enemy(), boost());
 
   /** How hard the enemy's next hit will be. */
@@ -132,6 +134,7 @@ export function createAdventure(host: AdventureHost) {
   }
 
   function renderSelection() {
+    boardEl.classList.toggle('hammering', armed.includes('hammer'));
     const s = tutorialStep();
     const wanted = s?.action === 'word' && s.word ? s.word : null;
     // Point at the tiles still needed for the tutorial's word.
@@ -192,9 +195,28 @@ export function createAdventure(host: AdventureHost) {
     renderSelection();
   }
 
+  /** With the hammer switched on, a tapped tile breaks: its column drops and a new tile falls in. Gems are safe. */
+  function smash(p: Pos) {
+    if (busy) return;
+    if (at(p).kind !== 'normal') return say("Not the gem! The hammer won't break those.");
+    armed = armed.filter((a) => a !== 'hammer');
+    artifacts = artifacts.map((a) => (a.id === 'hammer' ? { ...a, charge: 0 } : a));
+    selection = []; // the column shifts, so anything picked goes back
+    const created = refill(board, [p], makeTile);
+    for (const t of created) delete t.fresh;
+    say('Crack! A new letter drops in.');
+    host.tileSelected();
+    renderHealth();
+    renderBoard(new Set(created.map((t) => t.id)));
+    save();
+  }
+
   boardEl.addEventListener('click', (e) => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('.adv-tile');
-    if (el) pick({ c: Number(el.dataset.c), r: Number(el.dataset.r) });
+    if (!el) return;
+    const p = { c: Number(el.dataset.c), r: Number(el.dataset.r) };
+    if (armed.includes('hammer')) smash(p);
+    else pick(p);
   });
 
   /* ---------- Beside the board ---------- */
@@ -220,11 +242,12 @@ export function createAdventure(host: AdventureHost) {
       const ready = isReady(owned);
       const pips = Array.from({ length: fullCharge(owned.id) }, (_, k) => `<i${k < owned.charge ? ' class="on"' : ''}></i>`).join('');
       b.innerHTML = `<span class="adv-power-icon">${info.icon}</span><span class="adv-charge" aria-hidden="true">${pips}</span>`;
+      const on = armed.includes(owned.id);
       b.disabled = !ready || !allowed('artifact');
-      b.classList.toggle('ready', !b.disabled && armed !== owned.id);
-      b.classList.toggle('active', armed === owned.id);
-      b.title = `${info.name}: ${info.text()}`;
-      b.setAttribute('aria-label', `${info.name}, ${armed === owned.id ? 'ready for the next word' : ready ? 'charged' : `charging, ${owned.charge} of ${fullCharge(owned.id)}`}: ${info.text()}`);
+      b.classList.toggle('ready', !b.disabled && !on);
+      b.classList.toggle('active', on);
+      b.title = `${info.name}: ${describe(owned.id)}`;
+      b.setAttribute('aria-label', `${info.name}, ${on ? 'switched on' : ready ? 'charged' : `charging, ${owned.charge} of ${fullCharge(owned.id)}`}: ${describe(owned.id)}`);
       b.addEventListener('click', () => useArtifact(owned.id));
       box.appendChild(b);
     }
@@ -242,13 +265,18 @@ export function createAdventure(host: AdventureHost) {
         : `<p class="adv-info-none">None. It's just hay.</p>`);
   }
 
-  /** Tap a charged artifact to use it on the next word; tap again to put it away. */
+  /** Tap a charged artifact to switch it on; tap again to put it away without using it. */
   function useArtifact(id: ArtifactId) {
     if (!allowed('artifact')) return;
-    if (armed === id) armed = null;
+    if (armed.includes(id)) armed = armed.filter((a) => a !== id);
     else {
-      armed = id;
-      say(`The ${ARTIFACTS[id].name} glows! My next word does ×${TUNING.artifacts[id].multiplier} damage.`);
+      armed = [...armed, id];
+      if (id === 'goldenHorn') say(`The ${ARTIFACTS[id].name} glows! My next word does ×${spec(id).multiplier} damage.`);
+      else if (id === 'shield') say(`Shield up! The next hit does ${spec(id).block} less damage.`);
+      else {
+        selection = [];
+        say('Tap a tile to smash it with the hammer.');
+      }
     }
     renderHealth();
     renderSelection();
@@ -269,7 +297,7 @@ export function createAdventure(host: AdventureHost) {
     $('adv-enemy-hp').style.width = `${(enemyHp / e.hp) * 100}%`;
     $('adv-enemy-hp-text').textContent = `${enemyHp}/${e.hp}`;
     $('adv-hero-bar').classList.toggle('low', heroHp <= max * 0.3);
-    $('adv-hero-status').innerHTML = armed ? ARTIFACTS[armed].icon : '';
+    $('adv-hero-status').innerHTML = armed.map((a) => ARTIFACTS[a].icon).join('');
     goat.setWorried(heroHp > 0 && heroHp <= max * 0.3);
     renderInfo();
   }
@@ -370,10 +398,11 @@ export function createAdventure(host: AdventureHost) {
     const used = selection;
     const w = word();
     const usedGem = used.some((p) => at(p).kind !== 'normal');
-    // The artifact is spent on this word; later long words recharge it.
-    if (armed) artifacts = artifacts.map((a) => (a.id === armed ? { ...a, charge: 0 } : a));
-    else artifacts = chargeAfterWord(artifacts, w.length);
-    armed = null;
+    // Long words charge the horn; if it was switched on, this word spends it (and doesn't count toward recharging it).
+    const hornOn = armed.includes('goldenHorn');
+    artifacts = chargeAfterWord(artifacts, w.length);
+    if (hornOn) artifacts = artifacts.map((a) => (a.id === 'goldenHorn' ? { ...a, charge: 0 } : a));
+    armed = armed.filter((a) => a !== 'goldenHorn');
     busyRender();
 
     goat.react('chew');
@@ -432,14 +461,25 @@ export function createAdventure(host: AdventureHost) {
   async function enemyTurn() {
     busy = true;
     renderSelection();
-    const hit = nextHit();
+    let hit = nextHit();
     enemyTurns++;
     $('adv-enemy-wrap').classList.add('lunge');
     await wait(220);
     $('adv-enemy-wrap').classList.remove('lunge');
+    // A raised shield takes some of the hit, then it's spent until the next battle.
+    const blocked = armed.includes('shield') ? shieldBlock(hit) : 0;
+    if (armed.includes('shield')) {
+      armed = armed.filter((a) => a !== 'shield');
+      artifacts = artifacts.map((a) => (a.id === 'shield' ? { ...a, charge: 0 } : a));
+      say(`My shield blocked ${blocked}!`);
+      pop('hero', `🛡 ${blocked}`, 'heal');
+    }
+    hit -= blocked;
     heroHp = Math.max(0, heroHp - hit);
-    hurt('adv-hero');
-    pop('hero', `−${hit}`);
+    if (hit > 0) {
+      hurt('adv-hero');
+      window.setTimeout(() => pop('hero', `−${hit}`), blocked ? 250 : 0);
+    }
     renderHealth();
     if (heroHp <= 0) return lose();
     await wait(400);
@@ -447,9 +487,12 @@ export function createAdventure(host: AdventureHost) {
     renderSelection();
   }
 
-  function showResult(title: string, text: string, action: string, then: () => void) {
+  /** The card over the battle. `body` is HTML (our own text only); `art` is a drawing shown large above the title. */
+  function showResult(title: string, body: string, action: string, then: () => void, art = '') {
     $('adv-result-title').textContent = title;
-    $('adv-result-text').textContent = text;
+    $('adv-result-text').innerHTML = body;
+    $('adv-result-art').innerHTML = art;
+    $('adv-result-art').hidden = !art;
     const btn = $<HTMLButtonElement>('adv-result-go');
     btn.textContent = action;
     btn.onclick = () => {
@@ -467,6 +510,7 @@ export function createAdventure(host: AdventureHost) {
       stage,
       battle,
       startHp,
+      chapterHp,
       startArtifacts,
       live: { heroHp, enemyHp, enemyTurns, board, step, refills, armed },
     });
@@ -478,37 +522,41 @@ export function createAdventure(host: AdventureHost) {
     const e = enemy();
     say(e.tutorial ? 'I think I got the hang of it!' : 'Ha! Too easy.');
     const here = STAGES[stage];
-    const last = battle === enemies().length - 1;
-    let title = e.tutorial ? 'Tutorial done!' : 'Victory!';
-    let text: string;
-    let action = 'Next battle';
-    let next: () => void;
-    if (last) {
-      // Clearing a stage wins its treasure, which she keeps from now on, and moves on to the next stage (or
-      // replays the last one there is).
-      const reward = here.reward;
-      const isNew = !!reward && !artifacts.some((a) => a.id === reward) && artifacts.length < TUNING.artifactSlots;
-      if (reward && isNew) artifacts = [...artifacts, { id: reward, charge: fullCharge(reward) }];
-      renderPowers();
-      const to = Math.min(stage + 1, STAGES.length - 1);
-      const onward = to !== stage;
-      title = `${here.name} cleared!`;
-      text = `Rapunzel made it through ${here.name}.${reward && isNew ? ` She found the ${ARTIFACTS[reward].name}! ${ARTIFACTS[reward].text()}` : ''}${
-        onward ? ` Next: ${STAGES[to].name}.` : ''
-      }`;
-      action = onward ? 'Onward' : 'Play again';
-      saveArtifacts(artifacts);
-      saveRun({ stage: to, battle: 0, startHp: STAGES[to].startHp ?? TUNING.hero.hp, startArtifacts: artifacts });
-      next = () => startBattle(to, 0);
-    } else {
+    if (battle < enemies().length - 1) {
       // Health and artifacts carry from one battle to the next. Leaving the tutorial dummy, she has full health.
       const carry = { hp: e.tutorial ? TUNING.hero.hp : heroHp, artifacts };
       saveArtifacts(artifacts);
-      saveRun({ stage, battle: battle + 1, startHp: carry.hp, startArtifacts: artifacts });
-      text = e.tutorial ? 'Time for a real fight.' : `The ${e.name} slinks away. Rapunzel goes on with ${heroHp}/${TUNING.hero.hp} health.`;
-      next = () => startBattle(stage, battle + 1, carry);
+      saveRun({ stage, battle: battle + 1, startHp: carry.hp, chapterHp, startArtifacts: artifacts });
+      const text = e.tutorial ? 'Time for a real fight.' : `The ${e.name} slinks away. Rapunzel goes on with ${heroHp}/${TUNING.hero.hp} health.`;
+      window.setTimeout(() => showResult(e.tutorial ? 'Tutorial done!' : 'Victory!', text, 'Next battle', () => startBattle(stage, battle + 1, carry)), 700);
+      return;
     }
-    window.setTimeout(() => showResult(title, text, action, next), 700);
+    // Clearing a stage wins its treasure, which she keeps from now on, and moves on to the next stage (or replays
+    // the last one there is). The next stage starts with her health as it is now if it says so, or its own.
+    const reward = here.reward;
+    const isNew = !!reward && !artifacts.some((a) => a.id === reward) && artifacts.length < TUNING.artifactSlots;
+    if (reward && isNew) artifacts = [...artifacts, { id: reward, charge: fullCharge(reward) }];
+    renderPowers();
+    const to = Math.min(stage + 1, STAGES.length - 1);
+    const onward = to !== stage;
+    const next = STAGES[to];
+    const hp = onward && next.carryHp ? heroHp : (next.startHp ?? TUNING.hero.hp);
+    saveArtifacts(artifacts);
+    saveRun({ stage: to, battle: 0, startHp: hp, chapterHp: hp, startArtifacts: artifacts });
+    const go = () => startBattle(to, 0, { hp, artifacts });
+    const action = onward ? 'Onward' : 'Play again';
+    const cleared = `Rapunzel made it through ${here.name}.${onward ? ` Next: ${next.name}.` : ''}`;
+    const discovered = () => {
+      const info = ARTIFACTS[reward!];
+      showResult(
+        'Artifact discovered!',
+        `<p class="adv-result-name">${info.name}</p><p><b>Power:</b> ${info.power()}</p><p><b>Charging:</b> ${info.charging()}</p>`,
+        action,
+        go,
+        info.icon,
+      );
+    };
+    window.setTimeout(() => showResult(`${here.name} cleared!`, cleared, isNew ? 'Continue' : action, isNew ? discovered : go), 700);
   }
 
   function lose() {
@@ -516,7 +564,7 @@ export function createAdventure(host: AdventureHost) {
     say('Ow… I need a nap.');
     // Coming back after closing the game also starts this battle again.
     saveArtifacts(startArtifacts);
-    saveRun({ stage, battle, startHp, startArtifacts });
+    saveRun({ stage, battle, startHp, chapterHp, startArtifacts });
     window.setTimeout(() => showResult('Rapunzel needs a rest', `The ${enemy().name} wins this time.`, 'Try again', () => startBattle(stage, battle, { hp: startHp, artifacts: startArtifacts })), 700);
   }
 
@@ -531,10 +579,11 @@ export function createAdventure(host: AdventureHost) {
     const e = enemy();
     const here = STAGES[stage];
     heroHp = startHp = carry?.hp ?? (n === 0 ? (here.startHp ?? TUNING.hero.hp) : TUNING.hero.hp);
+    if (n === 0) chapterHp = heroHp;
     enemyHp = e.hp;
     enemyTurns = 0;
-    artifacts = startArtifacts = carry?.artifacts ?? artifacts;
-    armed = null;
+    artifacts = startArtifacts = chargeForBattle(carry?.artifacts ?? artifacts); // the shield and hammer refill every battle
+    armed = [];
     busy = false;
     selection = [];
     step = e.tutorial ? 0 : -1;
@@ -566,6 +615,7 @@ export function createAdventure(host: AdventureHost) {
     if (!run || !STAGES[s]?.enemies[run.battle]) return false;
     const owned = loadArtifacts(); // read before startBattle saves over it
     startBattle(s, run.battle, { hp: run.startHp, artifacts: run.startArtifacts });
+    chapterHp = run.chapterHp ?? (run.battle === 0 ? run.startHp : (STAGES[s].startHp ?? TUNING.hero.hp));
     const live = run.live;
     if (!live) return true;
     heroHp = live.heroHp;
@@ -575,7 +625,9 @@ export function createAdventure(host: AdventureHost) {
     step = live.step < TUTORIAL.length ? live.step : -1; // saves from when the tutorial had a Scramble step
     refills = live.refills;
     artifacts = owned;
-    armed = live.armed && artifacts.some((a) => a.id === live.armed && isReady(a)) ? live.armed : null;
+    // Older saves kept a single switched-on artifact, or none.
+    const wasOn: ArtifactId[] = Array.isArray(live.armed) ? live.armed : live.armed ? [live.armed] : [];
+    armed = wasOn.filter((id) => artifacts.some((a) => a.id === id && isReady(a)));
     factory.nextId = Math.max(factory.nextId, ...board.flat().map((t) => t.id + 1));
     $('adv-skip').hidden = step < 0;
     say(step >= 0 ? TUTORIAL[step].say : `Back for more? The ${enemy().name} is waiting.`);
@@ -612,14 +664,14 @@ export function createAdventure(host: AdventureHost) {
   function openMenu() {
     if (busy) return; // let the attack finish first
     const here = STAGES[stage];
-    const hp = here.startHp ?? TUNING.hero.hp;
+    const hp = chapterHp; // the health she arrived with
     menuCard('Menu', `${here.label}: ${here.name}`, [
       {
         label: 'Restart chapter',
         run: () =>
           menuCard('Restart chapter?', `Back to the first battle of ${here.name}, with ${hp}/${TUNING.hero.hp} health. You keep your artifacts.`, [
             { label: 'Cancel', run: openMenu },
-            { label: 'Restart chapter', run: () => (closeMenu(), startBattle(stage, 0)) },
+            { label: 'Restart chapter', run: () => (closeMenu(), startBattle(stage, 0, { hp, artifacts })) },
           ]),
       },
       {
