@@ -11,7 +11,7 @@ import { dict } from '../modes/mode';
 import { Goat } from '../ui/goat';
 import { STAGES, type Enemy } from './enemies';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_DONE, TUTORIAL_REFILLS, type TutorialStep } from './tutorial';
-import { SIZE, damageFor, makeBoard, num, refill, tilesFor, type Board } from './rules';
+import { SIZE, damageFor, gemTile, makeBoard, num, refill, tilesFor, type Board } from './rules';
 import { TUNING, gemForLength } from './tuning';
 import { ARTIFACTS, chargeAfterWord, fullCharge, isReady, type ArtifactId, type OwnedArtifact } from './artifacts';
 import { loadArtifacts, loadRun, saveArtifacts, saveRun } from './save';
@@ -402,7 +402,13 @@ export function createAdventure(host: AdventureHost) {
     const created = refill(board, used, makeTile);
     const gem = gemForLength(w.length);
     if (gem && created.length) {
-      (created.find((t) => t.fresh) ?? rng.pick(created)).kind = gem;
+      // A gem is never a hexed or frozen letter. If every new tile is one, give one of them a fresh letter first.
+      let tile = gemTile(created, (t) => !!markOf(t), (ts) => rng.pick(ts));
+      if (!tile) {
+        tile = rng.pick(created);
+        for (let i = 0; i < 20 && markOf(tile); i++) tile.letter = factory.letter(board);
+      }
+      tile.kind = gem;
       host.gemSpawned(gem);
     }
     for (const t of created) delete t.fresh;
@@ -609,11 +615,11 @@ export function createAdventure(host: AdventureHost) {
     const hp = here.startHp ?? TUNING.hero.hp;
     menuCard('Menu', `${here.label}: ${here.name}`, [
       {
-        label: 'Restart level',
+        label: 'Restart chapter',
         run: () =>
-          menuCard('Restart level?', `Back to the first battle of ${here.name}, with ${hp}/${TUNING.hero.hp} health. You keep your artifacts.`, [
+          menuCard('Restart chapter?', `Back to the first battle of ${here.name}, with ${hp}/${TUNING.hero.hp} health. You keep your artifacts.`, [
             { label: 'Cancel', run: openMenu },
-            { label: 'Restart level', run: () => (closeMenu(), startBattle(stage, 0)) },
+            { label: 'Restart chapter', run: () => (closeMenu(), startBattle(stage, 0)) },
           ]),
       },
       {

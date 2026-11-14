@@ -66,7 +66,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 
 - **Tutorial:** the Hay Dummy is a scripted lesson (`tutorial.ts`) with a fixed board and fixed refills: spell CAT, HORSE, then GOAT using the gem, then any word. The dummy can't drop below 1 health until the steps are done. **Skip tutorial** jumps to the first troll.
 - Each enemy has powers that change damage or hits, e.g. "words with an S do 2 less damage" or "every third hit does double". The powers are listed in the notes panel.
-- A power can **mark** the letters it affects (`marks` on the power), shown on the board and in the word bar. A **hex** is light red with a small ✶ (the Swamp Hag hexes E). **Frost** is icy teal with a ❄ (the Frost Troll freezes S); its teal is kept clear of the sapphire and diamond gem blues.
+- A power can **mark** the letters it affects (`marks` on the power), shown on the board and in the word bar. A **hex** is light red with a small ✶ (the Swamp Hag hexes E). **Frost** is icy teal with a ❄ (the Frost Troll freezes S); its teal is kept clear of the sapphire and diamond gem blues. A gem is never placed on a marked letter.
 - Each stage has its own scenery (`data-biome` on the screen: `mountain` or `swamp`).
 
 **Artifacts (`artifacts.ts`, numbers in `tuning.ts`):**
@@ -74,7 +74,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 - **Golden Troll Horn:** tap it before attacking and the next word does ×2 damage; tap again to cancel. It then needs 2 words of 6+ letters to recharge, shown as dots on its slot, and glows when ready.
 - The old consumable power-ups (apple, hay bale, braid) were removed in favour of artifacts.
 
-**Menu:** the gear button in the top bar opens a menu: **Restart level** (back to the first battle of the current stage, at its starting health, keeping artifacts), **Restart game** (back to the Tower Road tutorial, losing all progress and artifacts), **Go home** and **Keep playing**. Both restarts ask for confirmation.
+**Menu:** the gear button in the top bar opens a menu: **Restart chapter** (back to the first battle of the current stage, at its starting health, keeping artifacts), **Restart game** (back to the Tower Road tutorial, losing all progress and artifacts), **Go home** and **Keep playing**. Both restarts ask for confirmation.
 
 **Saving (`save.ts`):** the run is saved after every turn: the stage, battle, health, board, tutorial step and artifacts. Reopening Adventure carries on. Closing on a victory card resumes at the next battle, and closing after a loss resumes at the start of the lost battle.
 

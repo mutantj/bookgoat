@@ -55,6 +55,17 @@ export function tilesFor(board: Board, word: string, taken: Pos[] = []): Pos[] |
   return out;
 }
 
+/**
+ * Which new tile becomes the gem a long word leaves: the tutorial's scripted one (marked `fresh`) if there is one,
+ * otherwise a random one whose letter the enemy hasn't hexed or frozen. Null if every new tile is marked.
+ */
+export function gemTile(created: Tile[], marked: (t: Tile) => boolean, pick: (tiles: Tile[]) => Tile): Tile | null {
+  const scripted = created.find((t) => t.fresh);
+  if (scripted) return scripted;
+  const free = created.filter((t) => !marked(t));
+  return free.length ? pick(free) : null;
+}
+
 /** The damage a word does, and the working, e.g. "4 × 1.25 × 1.25 gem". `boost` is an artifact's multiplier, if one is in use. */
 export function damageFor(tiles: Tile[], enemy: Enemy, boost?: { multiplier: number; name: string }): { total: number; math: string } {
   const word = tiles.map((t) => t.letter.toLowerCase()).join('');

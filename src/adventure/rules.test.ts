@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Tile } from '../engine/board';
 import { dict } from '../modes/mode';
 import { STAGES } from './enemies';
-import { damageFor, makeBoard, refill, tilesFor, type Board } from './rules';
+import { damageFor, gemTile, makeBoard, refill, tilesFor, type Board } from './rules';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_REFILLS } from './tutorial';
 import { TUNING, gemForLength } from './tuning';
 import { chargeAfterWord, isReady, type OwnedArtifact } from './artifacts';
@@ -43,6 +43,22 @@ describe('adventure board', () => {
     const moss = STAGES[0].enemies.find((e) => e.name === 'Moss Troll')!;
     const cat = [tile('C'), tile('A'), tile('T')];
     expect(damageFor(cat, moss).total).toBe(damageFor(cat, dummy).total - 1);
+  });
+});
+
+describe('gem placement', () => {
+  const first = (ts: Tile[]) => ts[0];
+  const hexedE = (t: Tile) => t.letter === 'E';
+  it('never puts a gem on a marked letter', () => {
+    const created = [tile('E'), tile('E'), tile('R')];
+    expect(gemTile(created, hexedE, first)!.letter).toBe('R');
+  });
+  it('uses the tutorial’s scripted tile when there is one', () => {
+    const scripted = { ...tile('G'), fresh: true };
+    expect(gemTile([tile('A'), scripted], hexedE, first)).toBe(scripted);
+  });
+  it('gives up when every new tile is marked, so the caller can re-letter one', () => {
+    expect(gemTile([tile('E'), tile('E')], hexedE, first)).toBeNull();
   });
 });
 
