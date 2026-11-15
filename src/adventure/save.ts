@@ -13,6 +13,8 @@ export interface RunSave {
   startHp: number;
   /** Health when the stage began, for Restart chapter (missing in older saves). */
   chapterHp?: number;
+  /** Artifacts when the stage began, for Restart chapter (missing in older saves). */
+  chapterArtifacts?: OwnedArtifact[];
   startArtifacts: OwnedArtifact[];
   /** The battle as it stands, if it's under way. Without it, the battle starts fresh. */
   live?: {

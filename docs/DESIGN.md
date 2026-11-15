@@ -79,7 +79,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 - **Stone Hammer** (Stone Pass): tap it, then a tile, and the tile breaks; its column drops and a new tile falls in. It doesn't use a turn and won't break gems. Charged at the start of every battle.
 - The old consumable power-ups (apple, hay bale, braid) were removed in favour of artifacts.
 
-**Menu:** the gear button in the top bar opens a menu: **Restart chapter** (back to the first battle of the current stage, with the health she arrived with, keeping artifacts), **Restart game** (back to the Tower Road tutorial, losing all progress and artifacts), **Go home** and **Keep playing**. Both restarts ask for confirmation.
+**Menu:** the gear button in the top bar opens a menu: **Restart chapter** (back to the first battle of the current stage, with the health and artifacts she arrived with; an artifact won by clearing that stage, when replaying it, is taken away until she clears it again), **Restart game** (back to the Tower Road tutorial, losing all progress and artifacts), **Go home** and **Keep playing**. Both restarts ask for confirmation.
 
 **Saving (`save.ts`):** the run is saved after every turn: the stage, battle, health, board, tutorial step and artifacts. Reopening Adventure carries on. Closing on a victory card resumes at the next battle, and closing after a loss resumes at the start of the lost battle.
 

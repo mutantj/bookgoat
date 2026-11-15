@@ -182,3 +182,6 @@ export const STAGES: Stage[] = [
   { name: 'The Murky Swamp', label: 'Chapter 1', biome: 'swamp', startHp: 10, reward: 'shield', enemies: SWAMP },
   { name: 'The Stone Pass', label: 'Chapter 2', biome: 'peaks', carryHp: true, reward: 'hammer', enemies: STONE_PASS },
 ];
+
+/** The artifacts won by clearing the stages before stage `s`: what she may hold when she restarts that stage. */
+export const unlockedBefore = (s: number): ArtifactId[] => STAGES.slice(0, s).flatMap((x) => (x.reward ? [x.reward] : []));

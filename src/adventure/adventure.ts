@@ -9,7 +9,7 @@ import { Rng } from '../engine/rng';
 import type { GemKind } from '../engine/rules';
 import { dict } from '../modes/mode';
 import { Goat } from '../ui/goat';
-import { STAGES, type Enemy } from './enemies';
+import { STAGES, unlockedBefore, type Enemy } from './enemies';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_DONE, TUTORIAL_REFILLS, type TutorialStep } from './tutorial';
 import { SIZE, damageFor, gemTile, makeBoard, num, refill, tilesFor, type Board } from './rules';
 import { TUNING, gemForLength } from './tuning';
@@ -55,6 +55,8 @@ export function createAdventure(host: AdventureHost) {
   let armed: ArtifactId[] = [];
   /** Rapunzel's health when this stage began, for Restart chapter. */
   let chapterHp: number = TUNING.hero.hp;
+  /** Her artifacts when this stage began, for Restart chapter. */
+  let chapterArtifacts: OwnedArtifact[] = artifacts;
   /** Index into TUTORIAL while the tutorial is running, otherwise -1. */
   let step = -1;
   let refills: string[] = [];
@@ -511,6 +513,7 @@ export function createAdventure(host: AdventureHost) {
       battle,
       startHp,
       chapterHp,
+      chapterArtifacts,
       startArtifacts,
       live: { heroHp, enemyHp, enemyTurns, board, step, refills, armed },
     });
@@ -526,7 +529,7 @@ export function createAdventure(host: AdventureHost) {
       // Health and artifacts carry from one battle to the next. Leaving the tutorial dummy, she has full health.
       const carry = { hp: e.tutorial ? TUNING.hero.hp : heroHp, artifacts };
       saveArtifacts(artifacts);
-      saveRun({ stage, battle: battle + 1, startHp: carry.hp, chapterHp, startArtifacts: artifacts });
+      saveRun({ stage, battle: battle + 1, startHp: carry.hp, chapterHp, chapterArtifacts, startArtifacts: artifacts });
       const text = e.tutorial ? 'Time for a real fight.' : `The ${e.name} slinks away. Rapunzel goes on with ${heroHp}/${TUNING.hero.hp} health.`;
       window.setTimeout(() => showResult(e.tutorial ? 'Tutorial done!' : 'Victory!', text, 'Next battle', () => startBattle(stage, battle + 1, carry)), 700);
       return;
@@ -542,7 +545,7 @@ export function createAdventure(host: AdventureHost) {
     const next = STAGES[to];
     const hp = onward && next.carryHp ? heroHp : (next.startHp ?? TUNING.hero.hp);
     saveArtifacts(artifacts);
-    saveRun({ stage: to, battle: 0, startHp: hp, chapterHp: hp, startArtifacts: artifacts });
+    saveRun({ stage: to, battle: 0, startHp: hp, chapterHp: hp, chapterArtifacts: artifacts, startArtifacts: artifacts });
     const go = () => startBattle(to, 0, { hp, artifacts });
     const action = onward ? 'Onward' : 'Play again';
     const cleared = `Rapunzel made it through ${here.name}.${onward ? ` Next: ${next.name}.` : ''}`;
@@ -564,7 +567,7 @@ export function createAdventure(host: AdventureHost) {
     say('Ow… I need a nap.');
     // Coming back after closing the game also starts this battle again.
     saveArtifacts(startArtifacts);
-    saveRun({ stage, battle, startHp, chapterHp, startArtifacts });
+    saveRun({ stage, battle, startHp, chapterHp, chapterArtifacts, startArtifacts });
     window.setTimeout(() => showResult('Rapunzel needs a rest', `The ${enemy().name} wins this time.`, 'Try again', () => startBattle(stage, battle, { hp: startHp, artifacts: startArtifacts })), 700);
   }
 
@@ -579,10 +582,13 @@ export function createAdventure(host: AdventureHost) {
     const e = enemy();
     const here = STAGES[stage];
     heroHp = startHp = carry?.hp ?? (n === 0 ? (here.startHp ?? TUNING.hero.hp) : TUNING.hero.hp);
-    if (n === 0) chapterHp = heroHp;
     enemyHp = e.hp;
     enemyTurns = 0;
     artifacts = startArtifacts = chargeForBattle(carry?.artifacts ?? artifacts); // the shield and hammer refill every battle
+    if (n === 0) {
+      chapterHp = heroHp;
+      chapterArtifacts = artifacts;
+    }
     armed = [];
     busy = false;
     selection = [];
@@ -616,6 +622,7 @@ export function createAdventure(host: AdventureHost) {
     const owned = loadArtifacts(); // read before startBattle saves over it
     startBattle(s, run.battle, { hp: run.startHp, artifacts: run.startArtifacts });
     chapterHp = run.chapterHp ?? (run.battle === 0 ? run.startHp : (STAGES[s].startHp ?? TUNING.hero.hp));
+    chapterArtifacts = run.chapterArtifacts ?? (run.battle === 0 ? run.startArtifacts : owned); // older saves; Restart chapter trims extras
     const live = run.live;
     if (!live) return true;
     heroHp = live.heroHp;
@@ -665,13 +672,15 @@ export function createAdventure(host: AdventureHost) {
     if (busy) return; // let the attack finish first
     const here = STAGES[stage];
     const hp = chapterHp; // the health she arrived with
+    // The artifacts she arrived with, minus any won by clearing this stage (on a replay): she wins those again.
+    const kept = chapterArtifacts.filter((a) => unlockedBefore(stage).includes(a.id));
     menuCard('Menu', `${here.label}: ${here.name}`, [
       {
         label: 'Restart chapter',
         run: () =>
-          menuCard('Restart chapter?', `Back to the first battle of ${here.name}, with ${hp}/${TUNING.hero.hp} health. You keep your artifacts.`, [
+          menuCard('Restart chapter?', `Back to the first battle of ${here.name}, with ${hp}/${TUNING.hero.hp} health and the artifacts you had when it began.`, [
             { label: 'Cancel', run: openMenu },
-            { label: 'Restart chapter', run: () => (closeMenu(), startBattle(stage, 0, { hp, artifacts })) },
+            { label: 'Restart chapter', run: () => (closeMenu(), startBattle(stage, 0, { hp, artifacts: kept })) },
           ]),
       },
       {
