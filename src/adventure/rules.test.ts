@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Tile } from '../engine/board';
 import { dict } from '../modes/mode';
 import { STAGES, buildPower } from './enemies';
-import { damageFor, gemTile, makeBoard, refill, tilesFor, type Board } from './rules';
+import { damageFor, gemTile, makeBoard, refill, smashTile, tilesFor, type Board } from './rules';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_REFILLS } from './tutorial';
 import { TUNING, gemForLength } from './tuning';
 import { ARTIFACTS, chargeAfterWord, chargeForBattle, isReady, shieldBlock, type OwnedArtifact } from './artifacts';
@@ -43,6 +43,31 @@ describe('adventure board', () => {
     const moss = { ...dummy, powers: [buildPower({ name: 'Thick moss', kind: 'shortWords', under: 4, less: 1 })] };
     const cat = [tile('C'), tile('A'), tile('T')];
     expect(damageFor(cat, moss).total).toBe(damageFor(cat, dummy).total - 1);
+  });
+});
+
+describe('rubble', () => {
+  it('turns a tile, even a gem, into rubble that words skip', () => {
+    const board = makeBoard(() => tile(), ['CATX', 'XXXX', 'XXXX', 'XXXX']);
+    board[1][0].kind = 'gold';
+    const p = smashTile(board, 6, (spots) => spots.find((q) => q.c === 1 && q.r === 0)!);
+    expect(p).toEqual({ c: 1, r: 0 });
+    expect(board[1][0]).toMatchObject({ rubble: true, kind: 'normal' });
+    expect(tilesFor(board, 'cat')).toBeNull();
+  });
+  it('stops at the most rubble allowed', () => {
+    const board = makeBoard(() => tile());
+    const first = (spots: { c: number; r: number }[]) => spots[0];
+    expect(smashTile(board, 2, first)).not.toBeNull();
+    expect(smashTile(board, 2, first)).not.toBeNull();
+    expect(smashTile(board, 2, first)).toBeNull();
+  });
+  it('names only the powers that changed the damage, and the shield only on its turns', () => {
+    const shielded = { ...dummy, powers: [buildPower({ name: 'Shield', kind: 'shield', every: 3, less: 5 })] };
+    const goats = [tile('G'), tile('O'), tile('A'), tile('T'), tile('S')];
+    expect(damageFor(goats, shielded, undefined, 1).math).toContain('then Shield');
+    expect(damageFor(goats, shielded, undefined, 2).math).not.toContain('Shield');
+    expect(damageFor(goats, shielded, undefined, 2).total).toBe(damageFor(goats, dummy).total);
   });
 });
 

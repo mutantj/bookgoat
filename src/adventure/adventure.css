@@ -228,6 +228,15 @@
 .adv-foe .adv-sprite svg {
   filter: hue-rotate(var(--hue, 0deg));
 }
+/* An enemy shield is up: a pulsing pale-blue glow around the enemy until the word lands. */
+.adv-foe.guarded .adv-sprite {
+  border-radius: 50%;
+  animation: adv-guard 1.1s ease-in-out infinite alternate;
+}
+@keyframes adv-guard {
+  from { box-shadow: 0 0 0 3px rgba(150, 215, 255, 0.55), 0 0 14px rgba(150, 215, 255, 0.4); }
+  to { box-shadow: 0 0 0 5px rgba(150, 215, 255, 0.8), 0 0 26px rgba(150, 215, 255, 0.6); }
+}
 
 .adv-hero.lunge {
   transform: translateX(22px);
@@ -383,6 +392,32 @@
 @keyframes adv-wobble {
   from { transform: rotate(-2deg); }
   to { transform: rotate(2deg); }
+}
+/* Rubble: a tile an enemy smashed. Grey stone with no letter; it can't be picked until the Stone Hammer clears it. */
+.adv-board .tile.rubble .tile-face {
+  background: linear-gradient(160deg, #6d777a 0%, #545e61 60%, #3f474a 100%);
+  box-shadow: inset 0 -4px 0 #2c3335, inset 0 0 0 2px #2c3335;
+  cursor: not-allowed;
+}
+.adv-board .tile.rubble .tile-face svg {
+  width: 82%;
+  height: 82%;
+}
+.adv-board .tile.smashed .tile-face {
+  animation: adv-smash 420ms ease-out;
+}
+@keyframes adv-smash {
+  0% { transform: translateY(-14%) scale(1.15); }
+  45% { transform: translateY(4%) scale(0.92) rotate(-4deg); }
+  70% { transform: translateY(-2%) rotate(3deg); }
+}
+.adv-info-up {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(150, 215, 255, 0.2);
+  color: #bfe6ff;
+  font-size: 0.85em;
+  font-weight: 700;
 }
 /* A picked tile leaves an empty slot until the attack. */
 .adv-board .tile.taken .tile-face {

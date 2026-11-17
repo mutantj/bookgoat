@@ -14,6 +14,8 @@ export interface WordInfo {
   length: number;
   /** How many gem tiles the word uses. */
   gems: number;
+  /** Rapunzel's word number this battle, 1 for the first. */
+  turn: number;
 }
 
 /** What an enemy power sees when the enemy is about to hit. */
@@ -31,6 +33,10 @@ export interface EnemyPower {
   damage?(damage: number, word: WordInfo): number;
   /** Change how hard this enemy hits. */
   hit?(hit: number, info: HitInfo): number;
+  /** Whether this hit also smashes one of Rapunzel's tiles into rubble. Never more than `max` rubble at once. */
+  smash?: { on(info: HitInfo): boolean; max: number };
+  /** Whether the enemy's shield is up for Rapunzel's word number `turn`. */
+  shieldUp?(turn: number): boolean;
   /** Letters this power affects. Their tiles are marked on the board while the enemy is fought: light red for a
    * hex, icy teal for frost. */
   marks?: { letters: string[]; style: 'hex' | 'frost' };
@@ -106,6 +112,19 @@ export function buildPower(p: PowerTuning): EnemyPower {
     }
     case 'rampUp':
       return { name, text: `Hits ${p.perTurn} harder every turn.`, hit: (h, i) => h + p.perTurn * (i.turn - 1) };
+    case 'shield': {
+      const up = (turn: number) => (turn - 1) % p.every === 0;
+      const when = p.every === 1 ? 'every word' : `your first word and every ${ordinal(p.every)} word after`;
+      return { name, text: `Up for ${when}: that word does ${cutText(p)} damage.`, shieldUp: up, damage: (d, w) => (up(w.turn) ? cut(d, p) : d) };
+    }
+    case 'smash': {
+      const which = p.every === 1 ? 'Every hit' : `Every ${ordinal(p.every)} hit`;
+      return {
+        name,
+        text: `${which} also smashes one of your tiles into rubble. Only the Stone Hammer clears rubble.`,
+        smash: { on: (i) => i.turn % p.every === 0, max: p.max },
+      };
+    }
   }
 }
 

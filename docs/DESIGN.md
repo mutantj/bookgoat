@@ -67,6 +67,9 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 
 - **Tutorial:** the Hay Dummy is a scripted lesson (`tutorial.ts`) with a fixed board and fixed refills: spell CAT, HORSE, then GOAT using the gem, then any word. The dummy can't drop below 1 health until the steps are done. **Skip tutorial** jumps to the first troll.
 - Each enemy has powers that change damage or hits, e.g. "words with an S do 2 less damage" or "every third hit does double". The powers are listed in the notes panel.
+- The kinds of power, and every enemy's numbers, are set in `TUNING.enemies`: short words, a marked letter, no gem, every nth hit, enraged below some health, ramp up, **shield** and **smash**.
+- **Shield** (the Swamp Hag): up for Rapunzel's first word and every third word after; that word does 5 less damage. While it's up the enemy glows pale blue and the notes panel says "up now"; the damage line under the word names it.
+- **Smash** (the Stone Giant's Bash): every second hit also smashes a random tile, gems included, into **rubble** (`art/rubble.svg`): grey stone with no letter that can't be used in a word or typed. Rubble falls with its column, and only the Stone Hammer clears it. At most 6 rubble tiles at once. A new battle starts with a fresh board.
 - A power can **mark** the letters it affects (`marks` on the power), shown on the board and in the word bar. A **hex** is light red with a small ✶ (the Swamp Hag hexes E). **Frost** is icy teal with a ❄ (the Frost Troll freezes S); its teal is kept clear of the sapphire and diamond gem blues. A gem is never placed on a marked letter.
 - Each stage has its own scenery (`data-biome` on the screen: `mountain`, `swamp` or `peaks`). A stage with `carryHp` starts Rapunzel with the health she ended the previous stage on.
 - Clearing a stage that awards an artifact shows the cleared card, then an **Artifact discovered!** card: the artifact drawn large, its name, its power and how it charges.

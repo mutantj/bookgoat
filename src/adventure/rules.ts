@@ -42,7 +42,7 @@ export function refill(board: Board, used: Pos[], make: (board: Board) => Tile):
 export function tilesFor(board: Board, word: string, taken: Pos[] = []): Pos[] | null {
   const free: Pos[] = [];
   for (let c = 0; c < board.length; c++)
-    for (let r = 0; r < board[c].length; r++) if (!taken.some((p) => p.c === c && p.r === r)) free.push({ c, r });
+    for (let r = 0; r < board[c].length; r++) if (!board[c][r].rubble && !taken.some((p) => p.c === c && p.r === r)) free.push({ c, r });
   free.sort((a, b) => Number(isGem(board[b.c][b.r])) - Number(isGem(board[a.c][a.r])));
   const out: Pos[] = [];
   let rest = word;
@@ -53,6 +53,18 @@ export function tilesFor(board: Board, word: string, taken: Pos[] = []): Pos[] |
     out.push(free.splice(i, 1)[0]);
   }
   return out;
+}
+
+/** An enemy smashes a tile (a gem loses its gem) into rubble, unless `max` tiles are rubble already. Returns where. */
+export function smashTile(board: Board, max: number, pick: (spots: Pos[]) => Pos): Pos | null {
+  const spots: Pos[] = [];
+  for (let c = 0; c < board.length; c++) for (let r = 0; r < board[c].length; r++) if (!board[c][r].rubble) spots.push({ c, r });
+  if (!spots.length || board.length * board[0].length - spots.length >= max) return null;
+  const p = pick(spots);
+  const t = board[p.c][p.r];
+  t.rubble = true;
+  t.kind = 'normal';
+  return p;
 }
 
 /**
@@ -66,19 +78,28 @@ export function gemTile(created: Tile[], marked: (t: Tile) => boolean, pick: (ti
   return free.length ? pick(free) : null;
 }
 
-/** The damage a word does, and the working, e.g. "4 × 1.25 × 1.25 gem". `boost` is an artifact's multiplier, if one is in use. */
-export function damageFor(tiles: Tile[], enemy: Enemy, boost?: { multiplier: number; name: string }): { total: number; math: string } {
+/**
+ * The damage a word does, and the working, e.g. "4 × 1.25 × 1.25 gem". `boost` is an artifact's multiplier, if one is
+ * in use. `turn` is Rapunzel's word number this battle (1 for the first), for powers that change from turn to turn.
+ */
+export function damageFor(tiles: Tile[], enemy: Enemy, boost?: { multiplier: number; name: string }, turn = 1): { total: number; math: string } {
   const word = tiles.map((t) => t.letter.toLowerCase()).join('');
   const letters = tiles.reduce((sum, t) => sum + (TUNING.letterDamage[t.letter] ?? 1), 0);
   const length = lengthMultiplier(word.length);
   const gem = tiles.reduce((m, t) => m * (isGem(t) ? TUNING.gemMultiplier[t.kind] : 1), 1);
   const raw = letters * length * gem * (boost?.multiplier ?? 1);
   const gems = tiles.filter(isGem).length;
-  const afterPowers = enemy.powers.reduce((d, p) => p.damage?.(d, { word, length: word.length, gems }) ?? d, raw);
+  // Apply each power in turn, noting which ones changed the damage, for the working.
+  const changedBy: string[] = [];
+  const afterPowers = enemy.powers.reduce((d, p) => {
+    const next = p.damage?.(d, { word, length: word.length, gems, turn }) ?? d;
+    if (next !== d) changedBy.push(p.name);
+    return next;
+  }, raw);
   const parts = [`${num(letters)} × ${num(length)}`];
   if (gem !== 1) parts.push(`× ${num(gem)} gem`);
   if (boost) parts.push(`× ${num(boost.multiplier)} ${boost.name}`);
-  if (afterPowers !== raw) parts.push(`then ${enemy.powers.filter((p) => p.damage).map((p) => p.name).join(', ')}`);
+  if (changedBy.length) parts.push(`then ${changedBy.join(', ')}`);
   return { total: Math.max(TUNING.minDamage, Math.round(afterPowers)), math: parts.join(' ') };
 }
 

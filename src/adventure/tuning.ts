@@ -36,6 +36,10 @@ export const TUNING = {
    * - `everyNth`: every `every`th hit does `times` the damage.
    * - `enraged`: hits do `times` the damage while the enemy's health is under `below` (0.5 = half).
    * - `rampUp`: hits get `perTurn` harder every turn.
+   * - `shield`: her shield is up for Rapunzel's first word and every `every`th word after; that word does `less`
+   *   less damage, or `times` the damage.
+   * - `smash`: every `every`th hit also smashes a random tile (gems too) into rubble, which can't be used in a word
+   *   until the Stone Hammer clears it. Never more than `max` rubble tiles on the board at once.
    */
   enemies: {
     // The Tower Road
@@ -65,7 +69,7 @@ export const TUNING = {
       hit: 8,
       powers: [
         { name: 'Hex', kind: 'letter', letter: 'A', less: 3 },
-        { name: 'Hot temper', kind: 'enraged', below: 0.5, times: 1.5 },
+        { name: 'Shield', kind: 'shield', every: 3, less: 5 },
       ],
     },
     // The Stone Pass
@@ -91,6 +95,7 @@ export const TUNING = {
       powers: [
         { name: 'Petrify', kind: 'letter', letter: 'S', less: 3 },
         { name: 'Avalanche', kind: 'rampUp', perTurn: 1.5 },
+        { name: 'Bash', kind: 'smash', every: 2, max: 6 },
       ],
     },
   } satisfies Record<string, EnemyTuning>,
@@ -120,6 +125,8 @@ export type PowerTuning = { name: string } & (
   | { kind: 'everyNth'; every: number; times: number }
   | { kind: 'enraged'; below: number; times: number }
   | { kind: 'rampUp'; perTurn: number }
+  | ({ kind: 'shield'; every: number } & Cut)
+  | { kind: 'smash'; every: number; max: number }
 );
 
 export interface EnemyTuning {

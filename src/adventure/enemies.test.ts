@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { STAGES, buildPower, unlockedBefore } from './enemies';
 import { TUNING, type PowerTuning } from './tuning';
 
-const word = (w: string, gems = 0) => ({ word: w, length: w.length, gems });
+const word = (w: string, gems = 0, turn = 1) => ({ word: w, length: w.length, gems, turn });
 const hitOn = (p: PowerTuning, turn: number, health = 1) => buildPower(p).hit!(10, { turn, health });
 
 describe('adventure stages', () => {
@@ -61,5 +61,20 @@ describe('enemy power kinds', () => {
     const ramp: PowerTuning = { name: 'x', kind: 'rampUp', perTurn: 2 };
     expect(buildPower(ramp).text).toBe('Hits 2 harder every turn.');
     expect([hitOn(ramp, 1), hitOn(ramp, 3)]).toEqual([10, 14]);
+  });
+
+  it('shield is up for the first word and every nth word after', () => {
+    const shield = buildPower({ name: 'x', kind: 'shield', every: 3, less: 5 });
+    expect(shield.text).toBe('Up for your first word and every third word after: that word does 5 less damage.');
+    expect([1, 2, 3, 4, 7].map((t) => shield.shieldUp!(t))).toEqual([true, false, false, true, true]);
+    expect(shield.damage!(10, word('goat', 0, 1))).toBe(5);
+    expect(shield.damage!(10, word('goat', 0, 2))).toBe(10);
+  });
+
+  it('smash goes off on every nth hit', () => {
+    const bash = buildPower({ name: 'x', kind: 'smash', every: 2, max: 6 });
+    expect(bash.text).toBe('Every other hit also smashes one of your tiles into rubble. Only the Stone Hammer clears rubble.');
+    expect([1, 2, 3, 4].map((turn) => bash.smash!.on({ turn, health: 1 }))).toEqual([false, true, false, true]);
+    expect(bash.smash!.max).toBe(6);
   });
 });

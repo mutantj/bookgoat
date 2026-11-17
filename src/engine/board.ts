@@ -7,6 +7,8 @@ export interface Tile {
   kind: TileKind;
   /** Adventure marks the scripted refill tile that becomes a gem. */
   fresh?: boolean;
+  /** Adventure: smashed into rubble by an enemy. It can't be used in a word until the Stone Hammer clears it. */
+  rubble?: boolean;
 }
 
 export interface Pos {

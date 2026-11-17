@@ -4,6 +4,7 @@
 // artifacts.ts. The run is saved after every turn (save.ts), so closing the game and coming back carries on.
 import './adventure.css';
 import gearSvg from '../../art/gear.svg?raw';
+import rubbleSvg from '../../art/rubble.svg?raw';
 import { TileFactory, type Pos, type Tile } from '../engine/board';
 import { Rng } from '../engine/rng';
 import type { GemKind } from '../engine/rules';
@@ -11,7 +12,7 @@ import { dict } from '../modes/mode';
 import { Goat } from '../ui/goat';
 import { STAGES, unlockedBefore, type Enemy } from './enemies';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_DONE, TUTORIAL_REFILLS, type TutorialStep } from './tutorial';
-import { SIZE, damageFor, gemTile, makeBoard, num, refill, tilesFor, type Board } from './rules';
+import { SIZE, damageFor, gemTile, makeBoard, num, refill, smashTile, tilesFor, type Board } from './rules';
 import { TUNING, gemForLength } from './tuning';
 import { ARTIFACTS, chargeAfterWord, chargeForBattle, describe, fullCharge, isReady, shieldBlock, spec, type ArtifactId, type OwnedArtifact } from './artifacts';
 import { loadArtifacts, loadRun, saveArtifacts, saveRun } from './save';
@@ -87,17 +88,20 @@ export function createAdventure(host: AdventureHost) {
   const isWord = () => word().length >= TUNING.minWordLength && dict.has(word());
 
   const boost = () => (armed.includes('goldenHorn') ? { multiplier: spec('goldenHorn').multiplier ?? 1, name: 'horn' } : undefined);
-  const damage = (path = selection) => damageFor(path.map(at), enemy(), boost());
+  const damage = (path = selection) => damageFor(path.map(at), enemy(), boost(), enemyTurns + 1);
+  /** Whether the enemy's shield is up for the word being played now. */
+  const shieldUp = () => enemy().powers.some((p) => p.shieldUp?.(enemyTurns + 1));
 
   /** How hard the enemy's next hit will be. */
   function nextHit() {
     const e = enemy();
-    const info = { turn: enemyTurns + 1, health: enemyHp / e.hp };
+    const info = hitInfo();
     return Math.round(e.powers.reduce((h, p) => p.hit?.(h, info) ?? h, e.hit));
   }
+  const hitInfo = () => ({ turn: enemyTurns + 1, health: enemyHp / enemy().hp });
 
   /** How one of the enemy's powers marks this tile's letter ('hex' or 'frost'), if it does. */
-  const markOf = (t: Tile) => enemy().powers.find((p) => p.marks?.letters.includes(t.letter))?.marks?.style;
+  const markOf = (t: Tile) => t.rubble ? undefined : enemy().powers.find((p) => p.marks?.letters.includes(t.letter))?.marks?.style;
   const MARK_NAMES = { hex: 'hexed', frost: 'frozen' };
 
   const tileFace = (t: Tile) => {
@@ -117,6 +121,14 @@ export function createAdventure(host: AdventureHost) {
         el.dataset.id = String(t.id);
         el.className = 'tile adv-tile';
         if (fresh.has(t.id)) el.classList.add('drop');
+        if (t.rubble) {
+          el.classList.add('rubble');
+          el.setAttribute('role', 'gridcell');
+          el.setAttribute('aria-label', 'Rubble');
+          el.innerHTML = `<div class="tile-face">${inlineSvg(rubbleSvg)}</div>`;
+          boardEl.appendChild(el);
+          continue;
+        }
         el.classList.toggle('gem', t.kind !== 'normal');
         const mark = markOf(t);
         if (mark) el.dataset.mark = mark;
@@ -185,6 +197,7 @@ export function createAdventure(host: AdventureHost) {
   /** Tap a tile on the board: it moves up to the end of the word. */
   function pick(p: Pos) {
     if (!allowed('word') || selection.some((q) => same(q, p))) return;
+    if (at(p).rubble) return say("That's rubble. I can't spell with it.");
     selection.push(p);
     host.tileSelected();
     renderSelection();
@@ -201,12 +214,13 @@ export function createAdventure(host: AdventureHost) {
   function smash(p: Pos) {
     if (busy) return;
     if (at(p).kind !== 'normal') return say("Not the gem! The hammer won't break those.");
+    const wasRubble = at(p).rubble;
     armed = armed.filter((a) => a !== 'hammer');
     artifacts = artifacts.map((a) => (a.id === 'hammer' ? { ...a, charge: 0 } : a));
     selection = []; // the column shifts, so anything picked goes back
     const created = refill(board, [p], makeTile);
     for (const t of created) delete t.fresh;
-    say('Crack! A new letter drops in.');
+    say(wasRubble ? 'Crack! The rubble is gone and a new letter drops in.' : 'Crack! A new letter drops in.');
     host.tileSelected();
     renderHealth();
     renderBoard(new Set(created.map((t) => t.id)));
@@ -263,7 +277,7 @@ export function createAdventure(host: AdventureHost) {
       `<p class="adv-info-hit">⚔ Next hit: ${hit}${hit !== e.hit ? ` <span class="adv-info-base">(usually ${e.hit})</span>` : ''}</p>` +
       `<span class="label">Powers</span>` +
       (e.powers.length
-        ? `<ul class="adv-info-powers">${e.powers.map((p) => `<li><b>${p.name}</b> ${p.text}</li>`).join('')}</ul>`
+        ? `<ul class="adv-info-powers">${e.powers.map((p) => `<li><b>${p.name}</b>${p.shieldUp?.(enemyTurns + 1) ? ' <span class="adv-info-up">up now</span>' : ''} ${p.text}</li>`).join('')}</ul>`
         : `<p class="adv-info-none">None. It's just hay.</p>`);
   }
 
@@ -301,6 +315,7 @@ export function createAdventure(host: AdventureHost) {
     $('adv-hero-bar').classList.toggle('low', heroHp <= max * 0.3);
     $('adv-hero-status').innerHTML = armed.map((a) => ARTIFACTS[a].icon).join('');
     goat.setWorried(heroHp > 0 && heroHp <= max * 0.3);
+    $('adv-enemy-wrap').classList.toggle('guarded', shieldUp() && enemyHp > 0);
     renderInfo();
   }
 
@@ -463,6 +478,7 @@ export function createAdventure(host: AdventureHost) {
   async function enemyTurn() {
     busy = true;
     renderSelection();
+    const info = hitInfo();
     let hit = nextHit();
     enemyTurns++;
     $('adv-enemy-wrap').classList.add('lunge');
@@ -484,6 +500,19 @@ export function createAdventure(host: AdventureHost) {
     }
     renderHealth();
     if (heroHp <= 0) return lose();
+    // Bash: the hit also smashes one of her tiles into rubble.
+    const e = enemy();
+    const smash = e.powers.find((p) => p.smash?.on(info))?.smash;
+    const smashed = smash && smashTile(board, smash.max, (spots) => rng.pick(spots));
+    if (smashed) {
+      await wait(250);
+      selection = [];
+      renderBoard();
+      boardEl.querySelector(`[data-c="${smashed.c}"][data-r="${smashed.r}"]`)?.classList.add('smashed');
+      host.boardDropped();
+      say(`The ${e.name} smashed one of my letters!`);
+      await wait(300);
+    } else if (shieldUp()) say(`The ${e.name}'s shield is up. My next word does less damage.`);
     await wait(400);
     busy = false;
     renderSelection();
