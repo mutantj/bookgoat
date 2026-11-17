@@ -1,11 +1,12 @@
 // Adventure stages and their enemies, in the order they're fought. The first stage, the Tower Road, is the
-// tutorial: a hay dummy that walks through the mechanics, then three trolls.
+// tutorial: a hay dummy that walks through the mechanics, then three trolls. Their numbers are in tuning.ts.
 import trollSvg from '../../art/troll.svg?raw';
 import dummySvg from '../../art/haydummy.svg?raw';
 import bogSvg from '../../art/bogbeast.svg?raw';
 import emberSvg from '../../art/embertroll.svg?raw';
 import stoneSvg from '../../art/stonefolk.svg?raw';
 import type { ArtifactId } from './artifacts';
+import { TUNING, type Cut, type EnemyTuning, type PowerTuning } from './tuning';
 
 /** What an enemy power sees about the word being played. */
 export interface WordInfo {
@@ -64,116 +65,128 @@ export interface Stage {
   enemies: Enemy[];
 }
 
+/* ---------- Powers ----------
+ * Each power is built from its entry in TUNING.enemies, and its description is written from the same numbers. */
+
+const cut = (d: number, n: Cut) => (n.times !== undefined ? d * n.times : d - n.less);
+const cutText = (n: Cut) => (n.times === undefined ? `${n.less} less` : n.times === 0.5 ? 'half' : `${n.times} times the`);
+const timesText = (times: number) => (times === 2 ? 'double' : `${times} times the`);
+const ordinal = (n: number) => ({ 2: 'other', 3: 'third', 4: 'fourth', 5: 'fifth' })[n] ?? `${n}th`;
+
+/** Turn a power's tuning entry into the power the game uses. */
+export function buildPower(p: PowerTuning): EnemyPower {
+  const { name } = p;
+  switch (p.kind) {
+    case 'shortWords': {
+      const min = TUNING.minWordLength;
+      const words = p.under === min + 1 ? `${min}-letter words` : `Words under ${p.under} letters`;
+      return { name, text: `${words} do ${cutText(p)} damage.`, damage: (d, w) => (w.length < p.under ? cut(d, p) : d) };
+    }
+    case 'letter': {
+      const style = p.style ?? 'hex';
+      return {
+        name,
+        text: `Words with a ${style === 'hex' ? 'hexed' : 'frozen'} ${p.letter} do ${cutText(p)} damage.`,
+        marks: { letters: [p.letter], style },
+        damage: (d, w) => (w.word.includes(p.letter.toLowerCase()) ? cut(d, p) : d),
+      };
+    }
+    case 'noGem':
+      return { name, text: `Words without a gem do ${cutText(p)} damage.`, damage: (d, w) => (w.gems ? d : cut(d, p)) };
+    case 'everyNth':
+      return {
+        name,
+        text: `Every ${ordinal(p.every)} hit does ${timesText(p.times)} damage.`,
+        hit: (h, i) => (i.turn % p.every === 0 ? h * p.times : h),
+      };
+    case 'enraged': {
+      const hard = p.times === 1.5 ? 'half again as hard' : p.times === 2 ? 'twice as hard' : `${p.times} times as hard`;
+      const health = p.below === 0.5 ? 'half health' : `${Math.round(p.below * 100)}% health`;
+      return { name, text: `Hits ${hard} below ${health}.`, hit: (h, i) => (i.health < p.below ? h * p.times : h) };
+    }
+    case 'rampUp':
+      return { name, text: `Hits ${p.perTurn} harder every turn.`, hit: (h, i) => h + p.perTurn * (i.turn - 1) };
+  }
+}
+
+/** An enemy's health, hit and powers from its tuning entry. */
+const stats = (n: EnemyTuning) => ({ hp: n.hp, hit: n.hit, powers: n.powers.map(buildPower) });
+const N = TUNING.enemies;
+
+/* ---------- Enemies ---------- */
+
 const TOWER_ROAD: Enemy[] = [
   {
     name: 'Hay Dummy',
-    hp: 30,
-    hit: 2,
+    ...stats(N.hayDummy),
     art: dummySvg,
     taunt: '…',
-    powers: [],
     tutorial: true,
   },
   {
     name: 'Moss Troll',
-    hp: 24,
-    hit: 3,
+    ...stats(N.mossTroll),
     art: trollSvg,
     taunt: 'Nobody crosses my bridge!',
-    powers: [{ name: 'Thick moss', text: '3-letter words do 1 less damage.', damage: (d, w) => (w.length === 3 ? d - 1 : d) }],
   },
   {
     name: 'Frost Troll',
-    hp: 30,
-    hit: 4,
+    ...stats(N.frostTroll),
     art: trollSvg,
     hue: 150,
     taunt: 'Brr. Your words feel cold already.',
-    powers: [
-      { name: 'Icy hide', text: 'Words with a frozen S do 2 less damage.', marks: { letters: ['S'], style: 'frost' }, damage: (d, w) => (w.word.includes('s') ? d - 2 : d) },
-      { name: 'Chill', text: 'Every third hit does double damage.', hit: (h, i) => (i.turn % 3 === 0 ? h * 2 : h) },
-    ],
   },
   {
     name: 'Ember Troll',
-    hp: 38,
-    hit: 5,
+    ...stats(N.emberTroll),
     art: emberSvg, // its own colours and gold horns (the Golden Troll Horn comes from it), so no tint
     taunt: 'I eat goats for breakfast.',
-    powers: [
-      { name: 'Thick skin', text: 'Words under 5 letters do half damage.', damage: (d, w) => (w.length < 5 ? d / 2 : d) },
-      { name: 'Hot temper', text: 'Hits half again as hard below half health.', hit: (h, i) => (i.health < 0.5 ? h * 1.5 : h) },
-    ],
   },
 ];
 
 const SWAMP: Enemy[] = [
   {
     name: 'Mire Toad',
-    hp: 40,
-    hit: 4,
+    ...stats(N.mireToad),
     art: bogSvg,
     taunt: 'Rapunzel squelches into the swamp, still sore from the trolls…',
-    powers: [{ name: 'Slime', text: 'Words without a gem do 2 less damage.', damage: (d, w) => (w.gems ? d : d - 2) }],
   },
   {
     name: 'Bog Lurker',
-    hp: 52,
-    hit: 5,
+    ...stats(N.bogLurker),
     art: bogSvg,
     hue: 200,
     taunt: 'Glub. Nobody leaves the bog.',
-    powers: [
-      { name: 'Murky', text: 'Words under 4 letters do half damage.', damage: (d, w) => (w.length < 4 ? d / 2 : d) },
-      { name: 'Lurk', text: 'Every other hit does 1.5 times the damage.', hit: (h, i) => (i.turn % 2 === 0 ? h * 1.5 : h) },
-    ],
   },
   {
     name: 'Swamp Hag',
-    hp: 66,
-    hit: 5,
+    ...stats(N.swampHag),
     art: bogSvg,
     hue: 260,
     taunt: 'A goat! Just what my stew needs.',
-    powers: [
-      { name: 'Hex', text: 'Words with a hexed E do 3 less damage.', marks: { letters: ['E'], style: 'hex' }, damage: (d, w) => (w.word.includes('e') ? d - 3 : d) },
-      { name: 'Bubbling brew', text: 'Hits 1 harder every turn.', hit: (h, i) => h + i.turn - 1 },
-    ],
   },
 ];
 
 const STONE_PASS: Enemy[] = [
   {
     name: 'Pebble Golem',
-    hp: 50,
-    hit: 5,
+    ...stats(N.pebbleGolem),
     art: stoneSvg,
     taunt: 'The path climbs into the cold mountains, and the rocks begin to move…',
-    powers: [{ name: 'Hard shell', text: 'Words under 5 letters do 2 less damage.', damage: (d, w) => (w.length < 5 ? d - 2 : d) }],
   },
   {
     name: 'Boulder Brute',
-    hp: 62,
-    hit: 6,
+    ...stats(N.boulderBrute),
     art: stoneSvg,
     hue: 30,
     taunt: 'CRUSH. GOAT.',
-    powers: [
-      { name: 'Grit', text: 'Words with a hexed A do 3 less damage.', marks: { letters: ['A'], style: 'hex' }, damage: (d, w) => (w.word.includes('a') ? d - 3 : d) },
-      { name: 'Heavy fists', text: 'Every third hit does double damage.', hit: (h, i) => (i.turn % 3 === 0 ? h * 2 : h) },
-    ],
   },
   {
     name: 'Stone Giant',
-    hp: 80,
-    hit: 6,
+    ...stats(N.stoneGiant),
     art: stoneSvg,
     hue: 200,
     taunt: 'Little goat. The mountain does not move for you.',
-    powers: [
-      { name: 'Petrify', text: 'Words with a hexed O do 3 less damage.', marks: { letters: ['O'], style: 'hex' }, damage: (d, w) => (w.word.includes('o') ? d - 3 : d) },
-      { name: 'Avalanche', text: 'Hits 1 harder every turn.', hit: (h, i) => h + i.turn - 1 },
-    ],
   },
 ];
 

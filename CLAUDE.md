@@ -53,7 +53,7 @@ Notes:
 - **Don't run Prettier.** The repo isn't formatted with it, and it rewrites quotes and line breaks.
 - Player-facing text is plain and friendly, and Rapunzel talks in the first person.
 - **All game art lives in `art/`** as SVG files, imported with `?raw` (strip the XML declaration and comments before inlining). Don't put drawings inline in code or `index.html`; only shapes the game builds while you play, like the line through selected letters, stay in code.
-- Put new tunable numbers in the area's numbers file (`rules.ts`, `tuning.ts`, `BLITZ`, `enemies.ts`), not inline.
+- Put new tunable numbers in the area's numbers file (`rules.ts`, `tuning.ts`, `BLITZ`; enemy numbers go in `TUNING.enemies`), not inline.
 - Add or update tests for rule changes (`engine.test.ts`, `adventure/*.test.ts`).
 
 ## Checking changes in a real browser

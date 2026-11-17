@@ -2,7 +2,7 @@
 
 A browser word game in the spirit of Bookworm, starring Rapunzel, an original goat with a long golden braid. It plays in portrait on a phone first, and works on desktop too. The live site is https://mutantj.github.io/bookgoat/.
 
-There are three modes: **Classic**, **Blitz** and **Adventure**. Adventure is behind a feature flag. Every number worth tuning lives in one file per area: `src/engine/rules.ts` for Classic and Blitz, `src/adventure/tuning.ts` and `src/adventure/enemies.ts` for Adventure.
+There are three modes: **Classic**, **Blitz** and **Adventure**. Adventure is behind a feature flag. Every number worth tuning lives in one file per area: `src/engine/rules.ts` for Classic and Blitz, `src/adventure/tuning.ts` for Adventure (including every enemy's health, hit and power numbers).
 
 ## Classic
 

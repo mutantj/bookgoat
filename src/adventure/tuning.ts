@@ -1,5 +1,5 @@
 // Every Adventure number in one place, for tuning by playing. With `npm run dev` the game reloads
-// as soon as this file is saved. Enemy health, hits and powers are in enemies.ts.
+// as soon as this file is saved. Enemies and their powers are set here too; how each kind of power works is in enemies.ts.
 import { RULES, type GemKind } from '../engine/rules';
 
 export const TUNING = {
@@ -25,6 +25,76 @@ export const TUNING = {
   /** Damage is rounded to a whole number, and a real word always does at least this much. */
   minDamage: 1,
 
+  /**
+   * Each enemy's health, its `hit` (damage to Rapunzel each turn, before powers) and its powers. A power has a name,
+   * a `kind` and that kind's numbers; its description in the game is written from them. Any enemy can have any mix
+   * of powers. The kinds (see PowerTuning below):
+   * - `shortWords`: words under `under` letters do `less` less damage, or `times` the damage.
+   * - `letter`: words using `letter` do `less` less damage, or `times` the damage. Its tiles are marked on the board
+   *   (`style`: 'hex', the default, or 'frost').
+   * - `noGem`: words without a gem tile do `less` less damage, or `times` the damage.
+   * - `everyNth`: every `every`th hit does `times` the damage.
+   * - `enraged`: hits do `times` the damage while the enemy's health is under `below` (0.5 = half).
+   * - `rampUp`: hits get `perTurn` harder every turn.
+   */
+  enemies: {
+    // The Tower Road
+    hayDummy: { hp: 30, hit: 2, powers: [] },
+    mossTroll: { hp: 24, hit: 3, powers: [{ name: 'Thick moss', kind: 'shortWords', under: 4, less: 1 }] },
+    frostTroll: { hp: 30, hit: 4, powers: [{ name: 'Icy hide', kind: 'shortWords', under: 5, times: 0.5 }] },
+    emberTroll: { hp: 38, hit: 5, powers: [{ name: 'Thick skin', kind: 'letter', letter: 'O', less: 2 }] },
+    // The Murky Swamp
+    mireToad: {
+      hp: 40,
+      hit: 6,
+      powers: [
+        { name: 'Slime', kind: 'noGem', less: 2 },
+        { name: 'Swampy', kind: 'everyNth', every: 3, times: 2 },
+      ],
+    },
+    bogLurker: {
+      hp: 52,
+      hit: 7,
+      powers: [
+        { name: 'Murky', kind: 'shortWords', under: 5, times: 0.5 },
+        { name: 'Lurk', kind: 'everyNth', every: 2, times: 1.5 },
+      ],
+    },
+    swampHag: {
+      hp: 66,
+      hit: 8,
+      powers: [
+        { name: 'Hex', kind: 'letter', letter: 'A', less: 3 },
+        { name: 'Hot temper', kind: 'enraged', below: 0.5, times: 1.5 },
+      ],
+    },
+    // The Stone Pass
+    pebbleGolem: {
+      hp: 50,
+      hit: 8,
+      powers: [
+        { name: 'Hard shell', kind: 'shortWords', under: 5, less: 3 },
+        { name: 'Avalanche', kind: 'rampUp', perTurn: 1 },
+      ],
+    },
+    boulderBrute: {
+      hp: 62,
+      hit: 9,
+      powers: [
+        { name: 'Grit', kind: 'letter', letter: 'E', less: 3 },
+        { name: 'Heavy fists', kind: 'everyNth', every: 3, times: 2 },
+      ],
+    },
+    stoneGiant: {
+      hp: 80,
+      hit: 10,
+      powers: [
+        { name: 'Petrify', kind: 'letter', letter: 'S', less: 3 },
+        { name: 'Avalanche', kind: 'rampUp', perTurn: 1.5 },
+      ],
+    },
+  } satisfies Record<string, EnemyTuning>,
+
   /** How many artifacts Rapunzel can carry. Empty slots show beside the board. */
   artifactSlots: 3,
   /** `charge: 'words'` recharges during a fight from long words; `charge: 'battle'` is full at the start of every battle. */
@@ -38,6 +108,25 @@ export const TUNING = {
     hammer: { charge: 'battle' },
   },
 };
+
+/** A damage cut: `less` points off, or the damage multiplied by `times`. */
+export type Cut = { less: number; times?: never } | { times: number; less?: never };
+
+/** One enemy power, as written in TUNING.enemies: its name in the game, its kind and that kind's numbers. */
+export type PowerTuning = { name: string } & (
+  | ({ kind: 'shortWords'; under: number } & Cut)
+  | ({ kind: 'letter'; letter: string; style?: 'hex' | 'frost' } & Cut)
+  | ({ kind: 'noGem' } & Cut)
+  | { kind: 'everyNth'; every: number; times: number }
+  | { kind: 'enraged'; below: number; times: number }
+  | { kind: 'rampUp'; perTurn: number }
+);
+
+export interface EnemyTuning {
+  hp: number;
+  hit: number;
+  powers: PowerTuning[];
+}
 
 export function lengthMultiplier(length: number): number {
   const table = TUNING.lengthMultiplier;

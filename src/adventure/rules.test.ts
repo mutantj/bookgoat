@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Tile } from '../engine/board';
 import { dict } from '../modes/mode';
-import { STAGES } from './enemies';
+import { STAGES, buildPower } from './enemies';
 import { damageFor, gemTile, makeBoard, refill, tilesFor, type Board } from './rules';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_REFILLS } from './tutorial';
 import { TUNING, gemForLength } from './tuning';
@@ -40,7 +40,7 @@ describe('adventure board', () => {
   });
 
   it('lets enemy powers change the damage', () => {
-    const moss = STAGES[0].enemies.find((e) => e.name === 'Moss Troll')!;
+    const moss = { ...dummy, powers: [buildPower({ name: 'Thick moss', kind: 'shortWords', under: 4, less: 1 })] };
     const cat = [tile('C'), tile('A'), tile('T')];
     expect(damageFor(cat, moss).total).toBe(damageFor(cat, dummy).total - 1);
   });
@@ -62,9 +62,9 @@ describe('gem placement', () => {
   });
 });
 
-describe('the swamp', () => {
-  it('Mire Toad slime takes 2 off words without a gem', () => {
-    const toad = STAGES[1].enemies[0];
+describe('gem powers', () => {
+  it('a no-gem power takes damage off words without a gem', () => {
+    const toad = { ...dummy, powers: [buildPower({ name: 'Slime', kind: 'noGem', less: 2 })] };
     const plain = [tile('C'), tile('A'), tile('T'), tile('S')];
     const gem = [tile('C', 'green'), tile('A'), tile('T'), tile('S')];
     expect(damageFor(plain, toad).total).toBe(damageFor(plain, dummy).total - 2);
