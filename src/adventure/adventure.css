@@ -228,8 +228,16 @@
 .adv-foe .adv-sprite svg {
   filter: hue-rotate(var(--hue, 0deg));
 }
-/* An enemy shield is up: a pulsing pale-blue glow around the enemy until the word lands. */
-.adv-foe.guarded .adv-sprite {
+/* An enemy shield is up: the shield part of its drawing (the `adv-guard` group, e.g. the bog beast's lily pad) pulses
+   bright. Drawings without one get a glowing ring instead. The glow is near-white so the enemy's hue tint barely shifts it. */
+.adv-foe.guarded .adv-guard {
+  animation: adv-guard-part 0.9s ease-in-out infinite alternate;
+}
+@keyframes adv-guard-part {
+  from { filter: brightness(1.25) drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px rgba(255, 255, 255, 0.7)); }
+  to { filter: brightness(1.6) drop-shadow(0 0 4px #fff) drop-shadow(0 0 10px rgba(255, 255, 255, 0.9)); }
+}
+.adv-foe.guarded .adv-sprite:not(:has(.adv-guard)) {
   border-radius: 50%;
   animation: adv-guard 1.1s ease-in-out infinite alternate;
 }
