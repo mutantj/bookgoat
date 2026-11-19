@@ -3,7 +3,7 @@
 // the columns fall and new tiles drop in on top.
 import type { Pos, Tile } from '../engine/board';
 import type { Enemy } from './enemies';
-import { TUNING, lengthMultiplier } from './tuning';
+import { TUNING, lengthMultiplier, letterValue, type Difficulty } from './tuning';
 
 export const SIZE = 4;
 
@@ -108,13 +108,20 @@ export function gemTile(created: Tile[], marked: (t: Tile) => boolean, pick: (ti
   return free.length ? pick(free) : null;
 }
 
-/**
- * The damage a word does, and the working, e.g. "4 × 1.25 × 1.25 gem". `boost` is an artifact's multiplier, if one is
- * in use. `turn` is Rapunzel's word number this battle (1 for the first), for powers that change from turn to turn.
- */
-export function damageFor(tiles: Tile[], enemy: Enemy, boost?: { multiplier: number; name: string }, turn = 1): { total: number; math: string } {
+/** What else a word's damage depends on. */
+export interface DamageOptions {
+  /** An artifact's multiplier, if one is in use. */
+  boost?: { multiplier: number; name: string };
+  /** Rapunzel's word number this battle (1 for the first), for powers that change from turn to turn. */
+  turn?: number;
+  /** Harder difficulties make the rarer letters worth more. */
+  difficulty?: Difficulty;
+}
+
+/** The damage a word does, and the working, e.g. "4 × 1.25 × 1.25 gem". */
+export function damageFor(tiles: Tile[], enemy: Enemy, { boost, turn = 1, difficulty = 'easy' }: DamageOptions = {}): { total: number; math: string } {
   const word = tiles.map((t) => t.letter.toLowerCase()).join('');
-  const letters = tiles.reduce((sum, t) => sum + (TUNING.letterDamage[t.letter] ?? 1), 0);
+  const letters = tiles.reduce((sum, t) => sum + letterValue(t.letter, difficulty), 0);
   const length = lengthMultiplier(word.length);
   const gem = tiles.reduce((m, t) => m * (isGem(t) ? TUNING.gemMultiplier[t.kind] : 1), 1);
   const raw = letters * length * gem * (boost?.multiplier ?? 1);

@@ -4,7 +4,7 @@ import { dict } from '../modes/mode';
 import { STAGES, buildPower } from './enemies';
 import { damageFor, gemTile, gemsOn, makeBoard, placeGems, refill, smashTile, tilesFor, type Board } from './rules';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_REFILLS } from './tutorial';
-import { DIFFICULTY, TUNING, gemForLength } from './tuning';
+import { DIFFICULTY, TUNING, gemForLength, lengthMultiplier, letterValue } from './tuning';
 import { ARTIFACTS, chargeAfterWord, chargeForBattle, isReady, shieldBlock, type OwnedArtifact } from './artifacts';
 
 let nextId = 1;
@@ -34,7 +34,7 @@ describe('adventure board', () => {
     const base = 4 * TUNING.lengthMultiplier[4];
     const horn = TUNING.artifacts.goldenHorn.multiplier;
     expect(damageFor(word, dummy).total).toBe(Math.round(base * TUNING.gemMultiplier.green));
-    const boosted = damageFor(word, dummy, { multiplier: horn, name: 'horn' });
+    const boosted = damageFor(word, dummy, { boost: { multiplier: horn, name: 'horn' } });
     expect(boosted.total).toBe(Math.round(base * TUNING.gemMultiplier.green * horn));
     expect(boosted.math).toContain(`× ${horn} horn`);
   });
@@ -65,9 +65,9 @@ describe('rubble', () => {
   it('names only the powers that changed the damage, and the shield only on its turns', () => {
     const shielded = { ...dummy, powers: [buildPower({ name: 'Shield', kind: 'shield', every: 3, less: 5 })] };
     const goats = [tile('G'), tile('O'), tile('A'), tile('T'), tile('S')];
-    expect(damageFor(goats, shielded, undefined, 1).math).toContain('then Shield');
-    expect(damageFor(goats, shielded, undefined, 2).math).not.toContain('Shield');
-    expect(damageFor(goats, shielded, undefined, 2).total).toBe(damageFor(goats, dummy).total);
+    expect(damageFor(goats, shielded, { turn: 1 }).math).toContain('then Shield');
+    expect(damageFor(goats, shielded, { turn: 2 }).math).not.toContain('Shield');
+    expect(damageFor(goats, shielded, { turn: 2 }).total).toBe(damageFor(goats, dummy).total);
   });
 });
 
@@ -88,6 +88,15 @@ describe('carried gems', () => {
     expect(next[0][1]).toMatchObject({ letter: 'R', kind: 'gold' });
     expect(next[3][2]).toMatchObject({ letter: 'E', kind: 'green' });
     expect(gemsOn(next)).toEqual(gems);
+  });
+  it('harder difficulties grow the part of a letter above 1', () => {
+    const z = TUNING.letterDamage.Z;
+    expect(letterValue('Z', 'easy')).toBe(z);
+    expect(letterValue('Z', 'hard')).toBeCloseTo(1 + (z - 1) * DIFFICULTY.hard.letters);
+    expect(letterValue('E', 'hard')).toBe(TUNING.letterDamage.E);
+    const zap = [tile('Z'), tile('A'), tile('P')];
+    const hard = ['Z', 'A', 'P'].reduce((sum, l) => sum + letterValue(l, 'hard'), 0) * lengthMultiplier(3);
+    expect(damageFor(zap, dummy, { difficulty: 'hard' }).total).toBe(Math.round(hard));
   });
   it('only Medium and Hard carry gems', () => {
     expect([DIFFICULTY.easy.carryGems, DIFFICULTY.medium.carryGems, DIFFICULTY.hard.carryGems]).toEqual([false, true, true]);

@@ -148,6 +148,8 @@ export interface DifficultyTuning {
   /** Every enemy's health and hit are multiplied by these (and rounded), unless an override sets them. */
   hp: number;
   hit: number;
+  /** Letters worth more than 1 have the part above 1 multiplied by this: at 1.5, Z (2) is worth 2.5. Plain letters stay 1. */
+  letters: number;
   /** Changes for single enemies on this difficulty. A number set here is used as it is (not multiplied), and
    * `powers` replaces the enemy's whole list. For example: stoneGiant: { hp: 130, powers: [...] } */
   overrides: Partial<Record<EnemyKey, Partial<EnemyTuning>>>;
@@ -155,10 +157,16 @@ export interface DifficultyTuning {
 
 /** The difficulties offered when a new Adventure starts. Easy is TUNING.enemies as it is. */
 export const DIFFICULTY: Record<Difficulty, DifficultyTuning> = {
-  easy: { label: 'Easy', tutorial: true, carryGems: false, hp: 1, hit: 1, overrides: {} },
-  medium: { label: 'Medium', tutorial: false, carryGems: true, hp: 1.25, hit: 1.25, overrides: {} },
-  hard: { label: 'Hard', tutorial: false, carryGems: true, hp: 1.5, hit: 1.5, overrides: {} },
+  easy: { label: 'Easy', tutorial: true, carryGems: false, hp: 1, hit: 1, letters: 1, overrides: {} },
+  medium: { label: 'Medium', tutorial: false, carryGems: true, hp: 1.25, hit: 1.25, letters: 1.25, overrides: {} },
+  hard: { label: 'Hard', tutorial: false, carryGems: true, hp: 1.5, hit: 1.5, letters: 1.5, overrides: {} },
 };
+
+/** A letter's damage on a difficulty: the part above 1 grows with the difficulty's `letters` multiplier. */
+export function letterValue(letter: string, difficulty: Difficulty): number {
+  const v = TUNING.letterDamage[letter] ?? 1;
+  return v > 1 ? 1 + (v - 1) * DIFFICULTY[difficulty].letters : v;
+}
 
 /** An enemy's numbers and powers on a difficulty: the multipliers first, then any override. */
 export function enemyTuning(key: EnemyKey, difficulty: Difficulty): EnemyTuning {

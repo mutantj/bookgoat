@@ -13,7 +13,7 @@ import { Goat } from '../ui/goat';
 import { STAGES, firstBattle, stagesFor, unlockedBefore, type Enemy } from './enemies';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_DONE, TUTORIAL_REFILLS, type TutorialStep } from './tutorial';
 import { SIZE, damageFor, gemTile, gemsOn, makeBoard, num, placeGems, refill, smashTile, tilesFor, type Board, type PlacedGem } from './rules';
-import { DIFFICULTY, TUNING, gemForLength, type Difficulty } from './tuning';
+import { DIFFICULTY, TUNING, gemForLength, letterValue, type Difficulty } from './tuning';
 import { ARTIFACTS, chargeAfterWord, chargeForBattle, describe, fullCharge, isReady, shieldBlock, spec, type ArtifactId, type OwnedArtifact } from './artifacts';
 import { loadArtifacts, loadRun, saveArtifacts, saveRun } from './save';
 
@@ -94,7 +94,7 @@ export function createAdventure(host: AdventureHost) {
   const isWord = () => word().length >= TUNING.minWordLength && dict.has(word());
 
   const boost = () => (armed.includes('goldenHorn') ? { multiplier: spec('goldenHorn').multiplier ?? 1, name: 'horn' } : undefined);
-  const damage = (path = selection) => damageFor(path.map(at), enemy(), boost(), enemyTurns + 1);
+  const damage = (path = selection) => damageFor(path.map(at), enemy(), { boost: boost(), turn: enemyTurns + 1, difficulty });
   /** Whether the enemy's shield is up for the word being played now. */
   const shieldUp = () => enemy().powers.some((p) => p.shieldUp?.(enemyTurns + 1));
 
@@ -111,7 +111,7 @@ export function createAdventure(host: AdventureHost) {
   const MARK_NAMES = { hex: 'hexed', frost: 'frozen' };
 
   const tileFace = (t: Tile) => {
-    const v = TUNING.letterDamage[t.letter] ?? 1;
+    const v = letterValue(t.letter, difficulty);
     return `<div class="tile-face"><span class="tile-letter${t.letter === 'Qu' ? ' qu' : ''}">${t.letter}</span><span class="tile-value">${v !== 1 ? num(v) : ''}</span></div>`;
   };
 
