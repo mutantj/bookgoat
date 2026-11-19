@@ -703,8 +703,9 @@ export function createAdventure(host: AdventureHost) {
   /** Whether the menu card must be answered: Escape doesn't close it (choosing a difficulty for a new run). */
   let menuLocked = false;
 
-  /** Fill the menu card: a title, a line of text and a column of buttons (`main` is the highlighted one, by default the last). */
-  function menuCard(title: string, text: string, actions: { label: string; run: () => void }[], main = actions.length - 1) {
+  /** Fill the menu card: a title, a line of text and a column of buttons (`main` is the highlighted one, by default the last).
+   * A button's `note` is a smaller line under its label. */
+  function menuCard(title: string, text: string, actions: { label: string; note?: string; run: () => void }[], main = actions.length - 1) {
     menuLocked = false;
     $('adv-menu-title').textContent = title;
     $('adv-menu-text').textContent = text;
@@ -715,6 +716,13 @@ export function createAdventure(host: AdventureHost) {
       b.type = 'button';
       b.className = `btn ${i === main ? 'btn-feed' : 'btn-quiet'}`;
       b.textContent = a.label;
+      if (a.note) {
+        b.classList.add('adv-menu-pick');
+        const note = document.createElement('span');
+        note.className = 'adv-menu-note';
+        note.textContent = a.note;
+        b.appendChild(note);
+      }
       b.addEventListener('click', a.run);
       box.appendChild(b);
     });
@@ -723,12 +731,24 @@ export function createAdventure(host: AdventureHost) {
   }
   const closeMenu = () => ($('adv-menu').hidden = true);
 
+  /** What sets a difficulty apart, from its numbers in DIFFICULTY, so the text keeps up when they change. */
+  function difficultyNote(d: Difficulty): string {
+    const t = DIFFICULTY[d];
+    const pct = (x: number) => `${Math.round((x - 1) * 100)}%`;
+    const lines = [t.tutorial ? 'Starts with a short tutorial.' : 'No tutorial: straight to the first troll.'];
+    const tougher = [t.hp > 1 && `have ${pct(t.hp)} more health`, t.hit > 1 && `hit ${pct(t.hit)} harder`].filter(Boolean);
+    lines.push(tougher.length ? `Enemies ${tougher.join(' and ')}.` : 'Enemies at their gentlest.');
+    if (t.letters > 1) lines.push(`Rare letters hit harder (Z is worth ${+letterValue('Z', d).toFixed(2)}).`);
+    if (t.carryGems) lines.push('Gems left on the board carry into the next fight.');
+    return lines.join(' ');
+  }
+
   /** Start a new run on the difficulty the player picks. `cancel`, if given, goes back instead (otherwise they must pick). */
   function chooseDifficulty(cancel?: () => void) {
-    const picks = (Object.keys(DIFFICULTY) as Difficulty[]).map((d) => ({ label: DIFFICULTY[d].label, run: () => newRun(d) }));
+    const picks = (Object.keys(DIFFICULTY) as Difficulty[]).map((d) => ({ label: DIFFICULTY[d].label, note: difficultyNote(d), run: () => newRun(d) }));
     menuCard(
       'Choose a difficulty',
-      'Easy starts with a short tutorial. On Medium and Hard you go straight to the first troll, and the enemies are tougher.',
+      'How tough should my adventure be? You can pick again with Restart game.',
       cancel ? [...picks, { label: 'Cancel', run: cancel }] : picks,
       0,
     );
