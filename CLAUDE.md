@@ -11,7 +11,7 @@ Bookgoat is a Bookworm-style browser word game starring Rapunzel the goat. Vite 
   - Split unrelated changes into separate commits.
   - Write the message in plain words: a short subject, then a few lines saying what changed for the player.
   - End it with the attribution lines the session gives you.
-- **"Update the version number"** means bumping the patch version in `package.json` (line 3) and `package-lock.json` (lines 3 and 9), e.g. 0.0.14 → 0.0.15. It's committed separately as "Set the version to x.y.z". The version shows on the home screen.
+- **"Update the version number"** means bumping the patch version in `package.json` (line 3) and `package-lock.json` (lines 3 and 9), e.g. 0.0.14 → 0.0.15. It's committed separately as "Set the version to x.y.z". The version shows on the home screen. The `bump-version` skill (`.claude/skills/bump-version`) does both steps.
 - When a request is ambiguous in a way that changes what gets built (for example a number that could mean two things), ask a short multiple-choice question. Otherwise make a sensible call and say what you chose.
 - For visual changes, take a screenshot and send it, so the developer can see the change on their phone.
 - Keep the Cloudflare API token private: never ask for it in chat, never write it to a file, never commit it.
