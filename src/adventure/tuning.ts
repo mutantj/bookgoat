@@ -143,6 +143,8 @@ export interface DifficultyTuning {
   label: string;
   /** Start with the Hay Dummy tutorial. Without it, the Tower Road starts at the first troll. */
   tutorial: boolean;
+  /** Gem tiles left on the board when she wins a fight stay in their places (letters too) for the next fight. */
+  carryGems: boolean;
   /** Every enemy's health and hit are multiplied by these (and rounded), unless an override sets them. */
   hp: number;
   hit: number;
@@ -153,9 +155,9 @@ export interface DifficultyTuning {
 
 /** The difficulties offered when a new Adventure starts. Easy is TUNING.enemies as it is. */
 export const DIFFICULTY: Record<Difficulty, DifficultyTuning> = {
-  easy: { label: 'Easy', tutorial: true, hp: 1, hit: 1, overrides: {} },
-  medium: { label: 'Medium', tutorial: false, hp: 1.25, hit: 1.25, overrides: {} },
-  hard: { label: 'Hard', tutorial: false, hp: 1.5, hit: 1.5, overrides: {} },
+  easy: { label: 'Easy', tutorial: true, carryGems: false, hp: 1, hit: 1, overrides: {} },
+  medium: { label: 'Medium', tutorial: false, carryGems: true, hp: 1.25, hit: 1.25, overrides: {} },
+  hard: { label: 'Hard', tutorial: false, carryGems: true, hp: 1.5, hit: 1.5, overrides: {} },
 };
 
 /** An enemy's numbers and powers on a difficulty: the multipliers first, then any override. */

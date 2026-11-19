@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Tile } from '../engine/board';
 import { dict } from '../modes/mode';
 import { STAGES, buildPower } from './enemies';
-import { damageFor, gemTile, makeBoard, refill, smashTile, tilesFor, type Board } from './rules';
+import { damageFor, gemTile, gemsOn, makeBoard, placeGems, refill, smashTile, tilesFor, type Board } from './rules';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_REFILLS } from './tutorial';
-import { TUNING, gemForLength } from './tuning';
+import { DIFFICULTY, TUNING, gemForLength } from './tuning';
 import { ARTIFACTS, chargeAfterWord, chargeForBattle, isReady, shieldBlock, type OwnedArtifact } from './artifacts';
 
 let nextId = 1;
@@ -68,6 +68,29 @@ describe('rubble', () => {
     expect(damageFor(goats, shielded, undefined, 1).math).toContain('then Shield');
     expect(damageFor(goats, shielded, undefined, 2).math).not.toContain('Shield');
     expect(damageFor(goats, shielded, undefined, 2).total).toBe(damageFor(goats, dummy).total);
+  });
+});
+
+describe('carried gems', () => {
+  it('takes the gem tiles off one board and puts them in the same places on the next', () => {
+    const old = makeBoard(() => tile());
+    old[0][1] = tile('R', 'gold');
+    old[3][2] = tile('E', 'green');
+    old[2][2] = { ...tile('S', 'sapphire'), rubble: true };
+    const gems = gemsOn(old);
+    expect(gems).toEqual([
+      { c: 0, r: 1, letter: 'R', kind: 'gold' },
+      { c: 3, r: 2, letter: 'E', kind: 'green' },
+    ]);
+    const next = makeBoard(() => tile());
+    const placed = placeGems(next, gems);
+    expect(placed).toHaveLength(2);
+    expect(next[0][1]).toMatchObject({ letter: 'R', kind: 'gold' });
+    expect(next[3][2]).toMatchObject({ letter: 'E', kind: 'green' });
+    expect(gemsOn(next)).toEqual(gems);
+  });
+  it('only Medium and Hard carry gems', () => {
+    expect([DIFFICULTY.easy.carryGems, DIFFICULTY.medium.carryGems, DIFFICULTY.hard.carryGems]).toEqual([false, true, true]);
   });
 });
 

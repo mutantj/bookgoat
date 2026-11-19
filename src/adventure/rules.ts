@@ -55,6 +55,36 @@ export function tilesFor(board: Board, word: string, taken: Pos[] = []): Pos[] |
   return out;
 }
 
+/** A gem tile and where it sits, carried from one fight to the next. */
+export interface PlacedGem {
+  c: number;
+  r: number;
+  letter: string;
+  kind: keyof typeof TUNING.gemMultiplier;
+}
+
+/** The gem tiles on the board. */
+export function gemsOn(board: Board): PlacedGem[] {
+  const out: PlacedGem[] = [];
+  for (let c = 0; c < board.length; c++) for (let r = 0; r < board[c].length; r++) {
+    const t = board[c][r];
+    if (isGem(t) && !t.rubble) out.push({ c, r, letter: t.letter, kind: t.kind });
+  }
+  return out;
+}
+
+/** Put carried gems back on a new board: each tile in a gem's place takes its letter and kind. Returns those tiles. */
+export function placeGems(board: Board, gems: PlacedGem[]): Tile[] {
+  return gems
+    .filter((g) => board[g.c]?.[g.r])
+    .map((g) => {
+      const t = board[g.c][g.r];
+      t.letter = g.letter;
+      t.kind = g.kind;
+      return t;
+    });
+}
+
 /** An enemy smashes a tile (a gem loses its gem) into rubble, unless `max` tiles are rubble already. Returns where. */
 export function smashTile(board: Board, max: number, pick: (spots: Pos[]) => Pos): Pos | null {
   const spots: Pos[] = [];

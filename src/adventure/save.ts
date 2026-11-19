@@ -1,5 +1,5 @@
 // Adventure's saved state on this device: the run in progress, and the artifacts Rapunzel keeps between runs.
-import type { Board } from './rules';
+import type { Board, PlacedGem } from './rules';
 import type { ArtifactId, OwnedArtifact } from './artifacts';
 import type { Difficulty } from './tuning';
 
@@ -19,6 +19,9 @@ export interface RunSave {
   /** Artifacts when the stage began, for Restart chapter (missing in older saves). */
   chapterArtifacts?: OwnedArtifact[];
   startArtifacts: OwnedArtifact[];
+  /** Gems carried into this battle and into the stage (Medium and Hard), for a retry and Restart chapter. */
+  startGems?: PlacedGem[];
+  chapterGems?: PlacedGem[];
   /** The battle as it stands, if it's under way. Without it, the battle starts fresh. */
   live?: {
     heroHp: number;
