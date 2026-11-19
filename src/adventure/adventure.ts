@@ -10,10 +10,10 @@ import { Rng } from '../engine/rng';
 import type { GemKind } from '../engine/rules';
 import { dict } from '../modes/mode';
 import { Goat } from '../ui/goat';
-import { STAGES, unlockedBefore, type Enemy } from './enemies';
+import { STAGES, firstBattle, stagesFor, unlockedBefore, type Enemy } from './enemies';
 import { TUTORIAL, TUTORIAL_BOARD, TUTORIAL_DONE, TUTORIAL_REFILLS, type TutorialStep } from './tutorial';
 import { SIZE, damageFor, gemTile, makeBoard, num, refill, smashTile, tilesFor, type Board } from './rules';
-import { TUNING, gemForLength } from './tuning';
+import { DIFFICULTY, TUNING, gemForLength, type Difficulty } from './tuning';
 import { ARTIFACTS, chargeAfterWord, chargeForBattle, describe, fullCharge, isReady, shieldBlock, spec, type ArtifactId, type OwnedArtifact } from './artifacts';
 import { loadArtifacts, loadRun, saveArtifacts, saveRun } from './save';
 
@@ -61,7 +61,10 @@ export function createAdventure(host: AdventureHost) {
   /** Index into TUTORIAL while the tutorial is running, otherwise -1. */
   let step = -1;
   let refills: string[] = [];
-  const enemies = () => STAGES[stage].enemies;
+  /** Chosen when the run began. The stages' enemies are built for it. */
+  let difficulty: Difficulty = 'easy';
+  let stages = STAGES;
+  const enemies = () => stages[stage].enemies;
   const enemy = () => enemies()[battle];
   const tutorialStep = (): TutorialStep | null => (step >= 0 ? TUTORIAL[step] : null);
 
@@ -539,6 +542,7 @@ export function createAdventure(host: AdventureHost) {
     saveArtifacts(artifacts);
     saveRun({
       stage,
+      difficulty,
       battle,
       startHp,
       chapterHp,
@@ -553,12 +557,12 @@ export function createAdventure(host: AdventureHost) {
     $('adv-enemy-wrap').classList.add('defeated');
     const e = enemy();
     say(e.tutorial ? 'I think I got the hang of it!' : 'Ha! Too easy.');
-    const here = STAGES[stage];
+    const here = stages[stage];
     if (battle < enemies().length - 1) {
       // Health and artifacts carry from one battle to the next. Leaving the tutorial dummy, she has full health.
       const carry = { hp: e.tutorial ? TUNING.hero.hp : heroHp, artifacts };
       saveArtifacts(artifacts);
-      saveRun({ stage, battle: battle + 1, startHp: carry.hp, chapterHp, chapterArtifacts, startArtifacts: artifacts });
+      saveRun({ stage, difficulty, battle: battle + 1, startHp: carry.hp, chapterHp, chapterArtifacts, startArtifacts: artifacts });
       const text = e.tutorial ? 'Time for a real fight.' : `The ${e.name} slinks away. Rapunzel goes on with ${heroHp}/${TUNING.hero.hp} health.`;
       window.setTimeout(() => showResult(e.tutorial ? 'Tutorial done!' : 'Victory!', text, 'Next battle', () => startBattle(stage, battle + 1, carry)), 700);
       return;
@@ -569,12 +573,12 @@ export function createAdventure(host: AdventureHost) {
     const isNew = !!reward && !artifacts.some((a) => a.id === reward) && artifacts.length < TUNING.artifactSlots;
     if (reward && isNew) artifacts = [...artifacts, { id: reward, charge: fullCharge(reward) }];
     renderPowers();
-    const to = Math.min(stage + 1, STAGES.length - 1);
+    const to = Math.min(stage + 1, stages.length - 1);
     const onward = to !== stage;
-    const next = STAGES[to];
+    const next = stages[to];
     const hp = onward && next.carryHp ? heroHp : (next.startHp ?? TUNING.hero.hp);
     saveArtifacts(artifacts);
-    saveRun({ stage: to, battle: 0, startHp: hp, chapterHp: hp, chapterArtifacts: artifacts, startArtifacts: artifacts });
+    saveRun({ stage: to, difficulty, battle: 0, startHp: hp, chapterHp: hp, chapterArtifacts: artifacts, startArtifacts: artifacts });
     const go = () => startBattle(to, 0, { hp, artifacts });
     const action = onward ? 'Onward' : 'Play again';
     const cleared = `Rapunzel made it through ${here.name}.${onward ? ` Next: ${next.name}.` : ''}`;
@@ -596,7 +600,7 @@ export function createAdventure(host: AdventureHost) {
     say('Ow… I need a nap.');
     // Coming back after closing the game also starts this battle again.
     saveArtifacts(startArtifacts);
-    saveRun({ stage, battle, startHp, chapterHp, chapterArtifacts, startArtifacts });
+    saveRun({ stage, difficulty, battle, startHp, chapterHp, chapterArtifacts, startArtifacts });
     window.setTimeout(() => showResult('Rapunzel needs a rest', `The ${enemy().name} wins this time.`, 'Try again', () => startBattle(stage, battle, { hp: startHp, artifacts: startArtifacts })), 700);
   }
 
@@ -609,12 +613,12 @@ export function createAdventure(host: AdventureHost) {
     stage = s;
     battle = n;
     const e = enemy();
-    const here = STAGES[stage];
+    const here = stages[stage];
     heroHp = startHp = carry?.hp ?? (n === 0 ? (here.startHp ?? TUNING.hero.hp) : TUNING.hero.hp);
     enemyHp = e.hp;
     enemyTurns = 0;
     artifacts = startArtifacts = chargeForBattle(carry?.artifacts ?? artifacts); // the shield and hammer refill every battle
-    if (n === 0) {
+    if (n === firstBattle(s, difficulty)) {
       chapterHp = heroHp;
       chapterArtifacts = artifacts;
     }
@@ -648,9 +652,11 @@ export function createAdventure(host: AdventureHost) {
     const run = loadRun();
     const s = run?.stage ?? 0;
     if (!run || !STAGES[s]?.enemies[run.battle]) return false;
+    difficulty = run.difficulty && DIFFICULTY[run.difficulty] ? run.difficulty : 'easy';
+    stages = stagesFor(difficulty);
     const owned = loadArtifacts(); // read before startBattle saves over it
     startBattle(s, run.battle, { hp: run.startHp, artifacts: run.startArtifacts });
-    chapterHp = run.chapterHp ?? (run.battle === 0 ? run.startHp : (STAGES[s].startHp ?? TUNING.hero.hp));
+    chapterHp = run.chapterHp ?? (run.battle === 0 ? run.startHp : (stages[s].startHp ?? TUNING.hero.hp));
     chapterArtifacts = run.chapterArtifacts ?? (run.battle === 0 ? run.startArtifacts : owned); // older saves; Restart chapter trims extras
     const live = run.live;
     if (!live) return true;
@@ -677,8 +683,12 @@ export function createAdventure(host: AdventureHost) {
   $('adv-skip').addEventListener('click', () => startBattle(stage, battle + 1, { hp: TUNING.hero.hp, artifacts }));
   /* ---------- Menu ---------- */
 
-  /** Fill the menu card: a title, a line of text and a column of buttons (the last one is the main button). */
-  function menuCard(title: string, text: string, actions: { label: string; run: () => void }[]) {
+  /** Whether the menu card must be answered: Escape doesn't close it (choosing a difficulty for a new run). */
+  let menuLocked = false;
+
+  /** Fill the menu card: a title, a line of text and a column of buttons (`main` is the highlighted one, by default the last). */
+  function menuCard(title: string, text: string, actions: { label: string; run: () => void }[], main = actions.length - 1) {
+    menuLocked = false;
     $('adv-menu-title').textContent = title;
     $('adv-menu-text').textContent = text;
     const box = $('adv-menu-actions');
@@ -686,7 +696,7 @@ export function createAdventure(host: AdventureHost) {
     actions.forEach((a, i) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = `btn ${i === actions.length - 1 ? 'btn-feed' : 'btn-quiet'}`;
+      b.className = `btn ${i === main ? 'btn-feed' : 'btn-quiet'}`;
       b.textContent = a.label;
       b.addEventListener('click', a.run);
       box.appendChild(b);
@@ -696,37 +706,51 @@ export function createAdventure(host: AdventureHost) {
   }
   const closeMenu = () => ($('adv-menu').hidden = true);
 
+  /** Start a new run on the difficulty the player picks. `cancel`, if given, goes back instead (otherwise they must pick). */
+  function chooseDifficulty(cancel?: () => void) {
+    const picks = (Object.keys(DIFFICULTY) as Difficulty[]).map((d) => ({ label: DIFFICULTY[d].label, run: () => newRun(d) }));
+    menuCard(
+      'Choose a difficulty',
+      'Easy starts with a short tutorial. On Medium and Hard you go straight to the first troll, and the enemies are tougher.',
+      cancel ? [...picks, { label: 'Cancel', run: cancel }] : picks,
+      0,
+    );
+    menuLocked = !cancel;
+  }
+
+  /** A new run from the start of the Tower Road, with no artifacts. Easy begins with the tutorial dummy. */
+  function newRun(d: Difficulty) {
+    closeMenu();
+    difficulty = d;
+    stages = stagesFor(d);
+    artifacts = [];
+    saveArtifacts(artifacts);
+    saveRun(null);
+    startBattle(0, firstBattle(0, d));
+  }
+
   /** The settings menu: restart this stage, start the whole adventure over, or go home. The run is already saved. */
   function openMenu() {
     if (busy) return; // let the attack finish first
-    const here = STAGES[stage];
+    const here = stages[stage];
     const hp = chapterHp; // the health she arrived with
     // The artifacts she arrived with, minus any won by clearing this stage (on a replay): she wins those again.
     const kept = chapterArtifacts.filter((a) => unlockedBefore(stage).includes(a.id));
-    menuCard('Menu', `${here.label}: ${here.name}`, [
+    menuCard('Menu', `${here.label}: ${here.name} · ${DIFFICULTY[difficulty].label}`, [
       {
         label: 'Restart chapter',
         run: () =>
           menuCard('Restart chapter?', `Back to the first battle of ${here.name}, with ${hp}/${TUNING.hero.hp} health and the artifacts you had when it began.`, [
             { label: 'Cancel', run: openMenu },
-            { label: 'Restart chapter', run: () => (closeMenu(), startBattle(stage, 0, { hp, artifacts: kept })) },
+            { label: 'Restart chapter', run: () => (closeMenu(), startBattle(stage, firstBattle(stage, difficulty), { hp, artifacts: kept })) },
           ]),
       },
       {
         label: 'Restart game',
         run: () =>
-          menuCard('Restart the whole game?', `Start again from the Tower Road tutorial. All progress is lost${artifacts.length ? ', and so are your artifacts' : ''}.`, [
+          menuCard('Restart the whole game?', `Start again from the Tower Road, on any difficulty. All progress is lost${artifacts.length ? ', and so are your artifacts' : ''}.`, [
             { label: 'Cancel', run: openMenu },
-            {
-              label: 'Start over',
-              run: () => {
-                closeMenu();
-                artifacts = [];
-                saveArtifacts(artifacts);
-                saveRun(null);
-                startBattle(0, 0);
-              },
-            },
+            { label: 'Start over', run: () => chooseDifficulty(openMenu) },
           ]),
       },
       {
@@ -745,7 +769,7 @@ export function createAdventure(host: AdventureHost) {
   $('adv-menu-open').addEventListener('click', openMenu);
   window.addEventListener('keydown', (e) => {
     if (screen.hidden || busy) return;
-    if (!$('adv-menu').hidden) return void (e.key === 'Escape' && closeMenu());
+    if (!$('adv-menu').hidden) return void (e.key === 'Escape' && !menuLocked && closeMenu());
     if (!$('adv-result').hidden) return;
     if (e.key === 'Enter') void attack();
     else if (e.key === 'Escape') {
@@ -767,7 +791,7 @@ export function createAdventure(host: AdventureHost) {
       screen.hidden = false;
       $('adv-result').hidden = true;
       closeMenu();
-      if (!resume()) startBattle(0, 0);
+      if (!resume()) chooseDifficulty();
     },
     isOpen: () => !screen.hidden,
   };

@@ -1,6 +1,7 @@
 // Adventure's saved state on this device: the run in progress, and the artifacts Rapunzel keeps between runs.
 import type { Board } from './rules';
 import type { ArtifactId, OwnedArtifact } from './artifacts';
+import type { Difficulty } from './tuning';
 
 const RUN_KEY = 'bookgoat.adventure.run.v1';
 const ARTIFACTS_KEY = 'bookgoat.adventure.artifacts.v1';
@@ -9,6 +10,8 @@ const ARTIFACTS_KEY = 'bookgoat.adventure.artifacts.v1';
 export interface RunSave {
   /** Index into STAGES (missing in saves from before there was more than one). */
   stage?: number;
+  /** Chosen when the run began (missing in older saves, which were Easy). */
+  difficulty?: Difficulty;
   battle: number;
   startHp: number;
   /** Health when the stage began, for Restart chapter (missing in older saves). */

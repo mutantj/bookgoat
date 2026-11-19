@@ -6,7 +6,7 @@ import bogSvg from '../../art/bogbeast.svg?raw';
 import emberSvg from '../../art/embertroll.svg?raw';
 import stoneSvg from '../../art/stonefolk.svg?raw';
 import type { ArtifactId } from './artifacts';
-import { TUNING, type Cut, type EnemyTuning, type PowerTuning } from './tuning';
+import { DIFFICULTY, TUNING, enemyTuning, type Cut, type Difficulty, type EnemyKey, type PowerTuning } from './tuning';
 
 /** What an enemy power sees about the word being played. */
 export interface WordInfo {
@@ -128,92 +128,107 @@ export function buildPower(p: PowerTuning): EnemyPower {
   }
 }
 
-/** An enemy's health, hit and powers from its tuning entry. */
-const stats = (n: EnemyTuning) => ({ hp: n.hp, hit: n.hit, powers: n.powers.map(buildPower) });
-const N = TUNING.enemies;
+/** How an enemy looks and talks. Its numbers and powers come from TUNING.enemies[key], for the chosen difficulty. */
+type EnemyLook = Omit<Enemy, 'hp' | 'hit' | 'powers'> & { key: EnemyKey };
 
 /* ---------- Enemies ---------- */
 
-const TOWER_ROAD: Enemy[] = [
+const TOWER_ROAD: EnemyLook[] = [
   {
     name: 'Hay Dummy',
-    ...stats(N.hayDummy),
+    key: 'hayDummy',
     art: dummySvg,
     taunt: '…',
     tutorial: true,
   },
   {
     name: 'Moss Troll',
-    ...stats(N.mossTroll),
+    key: 'mossTroll',
     art: trollSvg,
     taunt: 'Nobody crosses my bridge!',
   },
   {
     name: 'Frost Troll',
-    ...stats(N.frostTroll),
+    key: 'frostTroll',
     art: trollSvg,
     hue: 150,
     taunt: 'Brr. Your words feel cold already.',
   },
   {
     name: 'Ember Troll',
-    ...stats(N.emberTroll),
+    key: 'emberTroll',
     art: emberSvg, // its own colours and gold horns (the Golden Troll Horn comes from it), so no tint
     taunt: 'I eat goats for breakfast.',
   },
 ];
 
-const SWAMP: Enemy[] = [
+const SWAMP: EnemyLook[] = [
   {
     name: 'Mire Toad',
-    ...stats(N.mireToad),
+    key: 'mireToad',
     art: bogSvg,
     taunt: 'Rapunzel squelches into the swamp, still sore from the trolls…',
   },
   {
     name: 'Bog Lurker',
-    ...stats(N.bogLurker),
+    key: 'bogLurker',
     art: bogSvg,
     hue: 200,
     taunt: 'Glub. Nobody leaves the bog.',
   },
   {
     name: 'Swamp Hag',
-    ...stats(N.swampHag),
+    key: 'swampHag',
     art: bogSvg,
     hue: 260,
     taunt: 'A goat! Just what my stew needs.',
   },
 ];
 
-const STONE_PASS: Enemy[] = [
+const STONE_PASS: EnemyLook[] = [
   {
     name: 'Pebble Golem',
-    ...stats(N.pebbleGolem),
+    key: 'pebbleGolem',
     art: stoneSvg,
     taunt: 'The path climbs into the cold mountains, and the rocks begin to move…',
   },
   {
     name: 'Boulder Brute',
-    ...stats(N.boulderBrute),
+    key: 'boulderBrute',
     art: stoneSvg,
     hue: 30,
     taunt: 'CRUSH. GOAT.',
   },
   {
     name: 'Stone Giant',
-    ...stats(N.stoneGiant),
+    key: 'stoneGiant',
     art: stoneSvg,
     hue: 200,
     taunt: 'Little goat. The mountain does not move for you.',
   },
 ];
 
-export const STAGES: Stage[] = [
-  { name: 'The Tower Road', label: 'Tutorial', biome: 'mountain', reward: 'goldenHorn', enemies: TOWER_ROAD },
-  { name: 'The Murky Swamp', label: 'Chapter 1', biome: 'swamp', carryHp: true, reward: 'shield', enemies: SWAMP },
-  { name: 'The Stone Pass', label: 'Chapter 2', biome: 'peaks', carryHp: true, reward: 'hammer', enemies: STONE_PASS },
-];
+/** The stages with their enemies' numbers and powers for a difficulty. */
+export function stagesFor(difficulty: Difficulty): Stage[] {
+  const build = (looks: EnemyLook[]): Enemy[] =>
+    looks.map(({ key, ...look }) => {
+      const n = enemyTuning(key, difficulty);
+      return { ...look, hp: n.hp, hit: n.hit, powers: n.powers.map(buildPower) };
+    });
+  return [
+    // Without the tutorial dummy, the Tower Road is a prologue.
+    { name: 'The Tower Road', label: DIFFICULTY[difficulty].tutorial ? 'Tutorial' : 'Prologue', biome: 'mountain', reward: 'goldenHorn', enemies: build(TOWER_ROAD) },
+    { name: 'The Murky Swamp', label: 'Chapter 1', biome: 'swamp', carryHp: true, reward: 'shield', enemies: build(SWAMP) },
+    { name: 'The Stone Pass', label: 'Chapter 2', biome: 'peaks', carryHp: true, reward: 'hammer', enemies: build(STONE_PASS) },
+  ];
+}
+
+/** The stages on Easy, which is TUNING.enemies as it is. */
+export const STAGES = stagesFor('easy');
+
+/** The first battle of stage `s`: the tutorial dummy is skipped on difficulties without the tutorial. */
+export const firstBattle = (s: number, difficulty: Difficulty) =>
+  DIFFICULTY[difficulty].tutorial ? 0 : Math.max(0, STAGES[s].enemies.findIndex((e) => !e.tutorial));
 
 /** The artifacts won by clearing the stages before stage `s`: what she may hold when she restarts that stage. */
 export const unlockedBefore = (s: number): ArtifactId[] => STAGES.slice(0, s).flatMap((x) => (x.reward ? [x.reward] : []));

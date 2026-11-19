@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { STAGES, buildPower, unlockedBefore } from './enemies';
-import { TUNING, type PowerTuning } from './tuning';
+import { STAGES, buildPower, firstBattle, stagesFor, unlockedBefore } from './enemies';
+import { DIFFICULTY, TUNING, enemyTuning, type PowerTuning } from './tuning';
 
 const word = (w: string, gems = 0, turn = 1) => ({ word: w, length: w.length, gems, turn });
 const hitOn = (p: PowerTuning, turn: number, health = 1) => buildPower(p).hit!(10, { turn, health });
@@ -76,5 +76,46 @@ describe('enemy power kinds', () => {
     expect(bash.text).toBe('Every other hit also smashes one of your tiles into rubble. Only the Stone Hammer clears rubble.');
     expect([1, 2, 3, 4].map((turn) => bash.smash!.on({ turn, health: 1 }))).toEqual([false, true, false, true]);
     expect(bash.smash!.max).toBe(6);
+  });
+});
+
+describe('difficulty', () => {
+  it('Easy is the tuning as it is', () => {
+    const sum = (stages: typeof STAGES) => stages.flatMap((st) => st.enemies.map((e) => [e.name, e.hp, e.hit, e.powers.map((p) => p.text)]));
+    expect(sum(stagesFor('easy'))).toEqual(sum(STAGES));
+    expect(enemyTuning('stoneGiant', 'easy')).toEqual(TUNING.enemies.stoneGiant);
+  });
+
+  it('Medium and Hard multiply health and hit, rounded, and keep the powers', () => {
+    for (const d of ['medium', 'hard'] as const) {
+      const base = TUNING.enemies.bogLurker;
+      const n = enemyTuning('bogLurker', d);
+      expect(n.hp).toBe(Math.round(base.hp * DIFFICULTY[d].hp));
+      expect(n.hit).toBe(Math.round(base.hit * DIFFICULTY[d].hit));
+      expect(n.powers).toEqual(base.powers);
+    }
+  });
+
+  it('an override replaces numbers and powers for one enemy', () => {
+    const overrides = DIFFICULTY.hard.overrides;
+    DIFFICULTY.hard.overrides = { mireToad: { hp: 99, powers: [{ name: 'Big slime', kind: 'noGem', less: 4 }] } };
+    try {
+      const toad = stagesFor('hard')[1].enemies[0];
+      expect(toad.hp).toBe(99);
+      expect(toad.hit).toBe(Math.round(TUNING.enemies.mireToad.hit * DIFFICULTY.hard.hit));
+      expect(toad.powers.map((p) => p.name)).toEqual(['Big slime']);
+    } finally {
+      DIFFICULTY.hard.overrides = overrides;
+    }
+  });
+
+  it('only difficulties with the tutorial start at the hay dummy', () => {
+    const dummyAt = STAGES[0].enemies.findIndex((e) => e.tutorial);
+    expect(firstBattle(0, 'easy')).toBe(dummyAt);
+    expect(STAGES[0].enemies[firstBattle(0, 'medium')].tutorial).toBeFalsy();
+    expect(STAGES[0].enemies[firstBattle(0, 'hard')].tutorial).toBeFalsy();
+    expect(firstBattle(1, 'hard')).toBe(0);
+    expect(stagesFor('easy')[0].label).toBe('Tutorial');
+    expect(stagesFor('medium')[0].label).toBe('Prologue');
   });
 });

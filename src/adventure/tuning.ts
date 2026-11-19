@@ -135,6 +135,36 @@ export interface EnemyTuning {
   powers: PowerTuning[];
 }
 
+/** Which enemy, by its key in TUNING.enemies. */
+export type EnemyKey = keyof typeof TUNING.enemies;
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+export interface DifficultyTuning {
+  label: string;
+  /** Start with the Hay Dummy tutorial. Without it, the Tower Road starts at the first troll. */
+  tutorial: boolean;
+  /** Every enemy's health and hit are multiplied by these (and rounded), unless an override sets them. */
+  hp: number;
+  hit: number;
+  /** Changes for single enemies on this difficulty. A number set here is used as it is (not multiplied), and
+   * `powers` replaces the enemy's whole list. For example: stoneGiant: { hp: 130, powers: [...] } */
+  overrides: Partial<Record<EnemyKey, Partial<EnemyTuning>>>;
+}
+
+/** The difficulties offered when a new Adventure starts. Easy is TUNING.enemies as it is. */
+export const DIFFICULTY: Record<Difficulty, DifficultyTuning> = {
+  easy: { label: 'Easy', tutorial: true, hp: 1, hit: 1, overrides: {} },
+  medium: { label: 'Medium', tutorial: false, hp: 1.25, hit: 1.25, overrides: {} },
+  hard: { label: 'Hard', tutorial: false, hp: 1.5, hit: 1.5, overrides: {} },
+};
+
+/** An enemy's numbers and powers on a difficulty: the multipliers first, then any override. */
+export function enemyTuning(key: EnemyKey, difficulty: Difficulty): EnemyTuning {
+  const base: EnemyTuning = TUNING.enemies[key];
+  const d = DIFFICULTY[difficulty];
+  return { hp: Math.round(base.hp * d.hp), hit: Math.round(base.hit * d.hit), powers: base.powers, ...d.overrides[key] };
+}
+
 export function lengthMultiplier(length: number): number {
   const table = TUNING.lengthMultiplier;
   if (table[length] !== undefined) return table[length];
