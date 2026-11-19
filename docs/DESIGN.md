@@ -62,7 +62,7 @@ Rapunzel fights enemies above a 4×4 board, on one portrait screen.
 | Stage | Label | Rapunzel starts at | Enemies (health) | Clearing it |
 |---|---|---|---|---|
 | The Tower Road | Tutorial | 30/30 | Hay Dummy (30), Moss Troll (24), Frost Troll (30), Ember Troll (38) | wins the Golden Troll Horn |
-| The Murky Swamp | Chapter 1 | 10/30 | Mire Toad (40), Bog Lurker (52), Swamp Hag (66) | wins the Swamp Shield |
+| The Murky Swamp | Chapter 1 | whatever the Tower Road left her | Mire Toad (40), Bog Lurker (52), Swamp Hag (66) | wins the Swamp Shield |
 | The Stone Pass | Chapter 2 | whatever the swamp left her | Pebble Golem (50), Boulder Brute (62), Stone Giant (80) | wins the Stone Hammer; Play again replays the pass at full health |
 
 - **Tutorial:** the Hay Dummy is a scripted lesson (`tutorial.ts`) with a fixed board and fixed refills: spell CAT, HORSE, then GOAT using the gem, then any word. The dummy can't drop below 1 health until the steps are done. **Skip tutorial** jumps to the first troll.

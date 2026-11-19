@@ -137,7 +137,9 @@ describe('stages', () => {
   it('the Tower Road gives the horn, the swamp the shield and the Stone Pass the hammer', () => {
     expect(STAGES.map((st) => st.reward)).toEqual(['goldenHorn', 'shield', 'hammer']);
   });
-  it('Rapunzel arrives at the Stone Pass with the health the swamp left her', () => {
+  it('Rapunzel arrives at the swamp and the Stone Pass with the health the stage before left her', () => {
+    expect(STAGES[1].carryHp).toBe(true);
+    expect(STAGES[1].startHp).toBeUndefined();
     expect(STAGES[2].carryHp).toBe(true);
     expect(STAGES[2].enemies).toHaveLength(3);
   });

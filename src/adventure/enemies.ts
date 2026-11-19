@@ -211,7 +211,7 @@ const STONE_PASS: Enemy[] = [
 
 export const STAGES: Stage[] = [
   { name: 'The Tower Road', label: 'Tutorial', biome: 'mountain', reward: 'goldenHorn', enemies: TOWER_ROAD },
-  { name: 'The Murky Swamp', label: 'Chapter 1', biome: 'swamp', startHp: 10, reward: 'shield', enemies: SWAMP },
+  { name: 'The Murky Swamp', label: 'Chapter 1', biome: 'swamp', carryHp: true, reward: 'shield', enemies: SWAMP },
   { name: 'The Stone Pass', label: 'Chapter 2', biome: 'peaks', carryHp: true, reward: 'hammer', enemies: STONE_PASS },
 ];
 
